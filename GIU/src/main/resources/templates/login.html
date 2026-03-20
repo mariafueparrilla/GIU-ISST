@@ -1,0 +1,95 @@
+<script src="/login.js"></script>
+<!doctype html>
+<html lang="es" class="h-full">
+<head>
+  <!-- Configuración básica del documento -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Título que aparece en la pestaña del navegador -->
+  <title>urFIX - Login</title>
+
+  <!-- Tailwind CSS para estilos rápidos -->
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+
+  <!-- Librería de iconos Lucide -->
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+
+  <!-- Tipografías de Google -->
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* Fuente por defecto de toda la página */
+    * { font-family: 'DM Sans', sans-serif; }
+
+    /* Fuente específica para el nombre de marca */
+    .font-mono-brand { font-family: 'Space Mono', monospace; }
+
+    /* Hace que html y body ocupen toda la altura */
+    html, body { height: 100%; margin: 0; }
+
+    /* Animación de entrada del contenido */
+    .fade-in { animation: fadeIn 0.4s ease-out; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Animaciones para los mensajes toast */
+    .toast-enter { animation: toastIn 0.35s ease-out; }
+    .toast-exit { animation: toastOut 0.3s ease-in forwards; }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(-12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes toastOut {
+      from { opacity: 1; transform: translateY(0); }
+      to { opacity: 0; transform: translateY(-12px); }
+    }
+
+    /* Elimina el borde azul por defecto al hacer focus */
+    input:focus {
+      outline: none;
+    }
+  </style>
+
+  <script>
+    /* Configuración personalizada de colores para Tailwind */
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              100: '#d9edff',
+              500: '#2b8aff',
+              600: '#1468f5'
+            },
+            surface: {
+              50: '#f8fafc',
+              100: '#f1f5f9',
+              200: '#e2e8f0'
+            },
+            dark: {
+              900: '#0f172a'
+            }
+          }
+        }
+      }
+    };
+  </script>
+</head>
+
+<body class="h-full bg-surface-50 text-dark-900">
+  <!-- Contenedor principal donde se renderiza el login -->
+  <div id="app" class="h-full w-full"></div>
+
+  <!-- Contenedor para notificaciones emergentes -->
+  <div id="toast-container" class="fixed top-4 right-4 z-[9999] flex flex-col gap-2"></div>
+
+  <!-- Archivo JS con la lógica del login -->
+  <script src="login.js"></script>
+</body>
+</html>
