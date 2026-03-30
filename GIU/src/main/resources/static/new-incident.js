@@ -1,7 +1,7 @@
 const storedUser = JSON.parse(localStorage.getItem('currentUser'));
 
 if (!storedUser || storedUser.role !== 'user') {
-  window.location.href = 'login.html';
+  window.location.href = '/login';
 }
 
 const roleMap = {
@@ -133,13 +133,14 @@ function attachNewIncidentEvents() {
   const counter = document.getElementById('description-counter');
   const form = document.getElementById('incident-form');
 
-  logoutBtn.addEventListener('click', () => {
+  logoutBtn.addEventListener('click', async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
     localStorage.removeItem('currentUser');
-    window.location.href = 'login.html';
+    window.location.href = '/login';
   });
 
   backDashboardBtn.addEventListener('click', () => {
-    window.location.href = 'dashboard.html';
+    window.location.href = '/dashboard';
   });
 
   description.addEventListener('input', () => {
@@ -149,7 +150,7 @@ function attachNewIncidentEvents() {
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     alert('Incidencia enviada correctamente');
-    window.location.href = 'dashboard.html';
+    window.location.href = '/dashboard';
   });
 }
 

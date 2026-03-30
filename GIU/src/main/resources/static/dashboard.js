@@ -82,17 +82,18 @@ function attachDashboardEvents() {
   const newIncidentNavBtn = document.getElementById('new-incident-nav-btn');
   const newIncidentMainBtn = document.getElementById('new-incident-main-btn');
 
-  logoutBtn.addEventListener('click', () => {
+  logoutBtn.addEventListener('click', async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
     localStorage.removeItem('currentUser');
-    window.location.href = 'login.html';
+    window.location.href = '/login';
   });
 
   newIncidentNavBtn.addEventListener('click', () => {
-    window.location.href = 'new-incident.html';
+    window.location.href = '/new-incident';
   });
 
   newIncidentMainBtn.addEventListener('click', () => {
-    window.location.href = 'new-incident.html';
+    window.location.href = '/new-incident';
   });
 }
 

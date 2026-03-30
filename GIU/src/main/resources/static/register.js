@@ -205,7 +205,7 @@ function renderRegister() {
           <div class="mt-6 text-center">
             <p class="text-sm text-slate-500">
               ¿Ya tienes cuenta?
-              <a href="login.html" class="font-bold hover:underline" style="color:${registerConfig.primaryColor};">
+              <a href="/login" class="font-bold hover:underline" style="color:${registerConfig.primaryColor};">
                 Inicia sesión
               </a>
             </p>
@@ -240,7 +240,7 @@ function attachRegisterEvents() {
   });
 
   // Valida y procesa el formulario
-  registerForm.addEventListener('submit', (e) => {
+  registerForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const dni = document.getElementById('reg-dni').value.trim().toUpperCase();
@@ -262,24 +262,39 @@ function attachRegisterEvents() {
       return;
     }
 
-    // Simulación del objeto usuario que luego se enviaría al backend
-    const newUser = {
-      dni,
-      name,
-      surname,
-      email,
-      role,
-      password
-    };
+    const mergedName = `${name} ${surname}`.trim();
 
-    console.log('Usuario registrado:', newUser);
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dni,
+          name: mergedName,
+          email,
+          role,
+          password
+        })
+      });
 
-    showToast('Cuenta creada con éxito', 'success');
+      if (!response.ok) {
+        if (response.status === 409) {
+          showToast('Ya existe un usuario con ese DNI', 'error');
+          return;
+        }
 
-    // Redirección simulada al login
-    setTimeout(() => {
-      window.location.href = 'login.html';
-    }, 1200);
+        showToast('No se pudo crear la cuenta', 'error');
+        return;
+      }
+
+      showToast('Cuenta creada con éxito', 'success');
+
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 1200);
+    } catch (error) {
+      showToast('No se pudo crear la cuenta', 'error');
+    }
   });
 }
 

@@ -8,22 +8,6 @@ const loginConfig = {
   textColor: '#0f172a'
 };
 
-// Usuarios de ejemplo para probar el login sin backend real
-const demoUsers = [
-  {
-    dni: '12345678A',
-    password: 'admin123',
-    name: 'Noelia',
-    role: 'admin'
-  },
-  {
-    dni: '87654321B',
-    password: 'user123',
-    name: 'María',
-    role: 'user'
-  }
-];
-
 /**
  * Muestra una notificación flotante.
  * @param {string} message - Mensaje a mostrar.
@@ -145,7 +129,7 @@ function renderLogin() {
           <div class="mt-6 text-center">
             <p class="text-sm text-slate-500">
               ¿No tienes cuenta?
-              <a href="register.html" class="font-bold hover:underline" style="color:${loginConfig.primaryColor};">
+              <a href="/register" class="font-bold hover:underline" style="color:${loginConfig.primaryColor};">
                 Regístrate
               </a>
             </p>
@@ -185,30 +169,36 @@ function attachLoginEvents() {
   });
 
   // Gestiona el envío del formulario
-  loginForm.addEventListener('submit', (e) => {
+  loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const dni = document.getElementById('login-dni').value.trim().toUpperCase();
     const password = document.getElementById('login-pw').value;
 
-    // Busca si existe un usuario con ese DNI y contraseña
-    const user = demoUsers.find(u => u.dni === dni && u.password === password);
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dni, password })
+      });
 
-    if (user) {
+      if (!response.ok) {
+        throw new Error('Credenciales incorrectas');
+      }
+
+      const user = await response.json();
       showToast(`¡Hola, ${user.name}!`, 'success');
 
-      // Guarda el usuario actual para que el dashboard pueda leerlo
       localStorage.setItem('currentUser', JSON.stringify(user));
 
-      // Redirección simulada al dashboard
       setTimeout(() => {
         if (user.role === 'admin') {
-          window.location.href = 'admin-dashboard.html';
+          window.location.href = '/admin-dashboard';
         } else {
-          window.location.href = 'dashboard.html';
+          window.location.href = '/dashboard';
         }
       }, 1000);
-    } else {
+    } catch (error) {
       showToast('DNI o contraseña incorrectos', 'error');
     }
   });
