@@ -1,55 +1,23 @@
-<script src="/register.js"></script>
 <!doctype html>
 <html lang="es" class="h-full">
 <head>
-  <!-- Configuración básica del documento -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>urFIX - Mis incidencias</title>
 
-  <!-- Título visible en la pestaña -->
-  <title>urFIX - Registro</title>
-
-  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
-
-  <!-- Librería de iconos -->
   <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
 
-  <!-- Tipografías -->
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 
   <style>
     * { font-family: 'DM Sans', sans-serif; }
     .font-mono-brand { font-family: 'Space Mono', monospace; }
     html, body { height: 100%; margin: 0; }
-
-    .fade-in { animation: fadeIn 0.4s ease-out; }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .toast-enter { animation: toastIn 0.35s ease-out; }
-    .toast-exit { animation: toastOut 0.3s ease-in forwards; }
-
-    @keyframes toastIn {
-      from { opacity: 0; transform: translateY(-12px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    @keyframes toastOut {
-      from { opacity: 1; transform: translateY(0); }
-      to { opacity: 0; transform: translateY(-12px); }
-    }
-
-    input:focus, select:focus {
-      outline: none;
-    }
+    input:focus, button:focus { outline: none; }
   </style>
 
   <script>
-    /* Colores personalizados para Tailwind */
     tailwind.config = {
       theme: {
         extend: {
@@ -75,13 +43,7 @@
 </head>
 
 <body class="h-full bg-surface-50 text-dark-900">
-  <!-- Contenedor principal -->
   <div id="app" class="h-full w-full"></div>
-
-  <!-- Contenedor de notificaciones -->
-  <div id="toast-container" class="fixed top-4 right-4 z-[9999] flex flex-col gap-2"></div>
-
-  <!-- JS del registro -->
-  <script src="../static/register.js"></script>
+  <script src="../static/dashboard.js"></script>
 </body>
 </html>

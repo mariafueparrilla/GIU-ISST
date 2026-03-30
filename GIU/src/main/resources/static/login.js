@@ -197,9 +197,16 @@ function attachLoginEvents() {
     if (user) {
       showToast(`¡Hola, ${user.name}!`, 'success');
 
+      // Guarda el usuario actual para que el dashboard pueda leerlo
+      localStorage.setItem('currentUser', JSON.stringify(user));
+
       // Redirección simulada al dashboard
       setTimeout(() => {
-        window.location.href = 'dashboard.html';
+        if (user.role === 'admin') {
+          window.location.href = 'admin-dashboard.html';
+        } else {
+          window.location.href = 'dashboard.html';
+        }
       }, 1000);
     } else {
       showToast('DNI o contraseña incorrectos', 'error');
