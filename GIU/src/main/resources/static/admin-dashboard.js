@@ -1,5 +1,6 @@
 let currentUser = null;
 let users = [];
+let incidents = [];
 let activeTab = 'incidencias';
 
 const roleMap = {
@@ -9,22 +10,16 @@ const roleMap = {
   technician: 'Tecnico'
 };
 
-const demoStats = {
-  total: 0,
-  pendientes: 0,
-  enProgreso: 0,
-  resueltas: 0,
-  cerradas: 0,
-  urgentes: 0,
-  categorias: [
-    { nombre: 'Via publica', valor: 0, icon: 'construction' },
-    { nombre: 'Alumbrado', valor: 0, icon: 'lightbulb' },
-    { nombre: 'Zonas verdes', valor: 0, icon: 'trees' },
-    { nombre: 'Agua', valor: 0, icon: 'droplets' },
-    { nombre: 'Residuos', valor: 0, icon: 'trash-2' },
-    { nombre: 'Otros', valor: 0, icon: 'help-circle' }
-  ]
+const stateLabelMap = {
+  creada: 'Creada',
+  validada: 'Validada',
+  asignada: 'Asignada',
+  en_curso: 'En curso',
+  resuelta: 'Resuelta',
+  cerrada: 'Cerrada'
 };
+
+const allStates = ['CREADA', 'VALIDADA', 'ASIGNADA', 'EN_CURSO', 'RESUELTA', 'CERRADA'];
 
 function getUserRoleStats(userList) {
   return {
@@ -33,6 +28,18 @@ function getUserRoleStats(userList) {
     operator: userList.filter(u => u.role === 'operator').length,
     technician: userList.filter(u => u.role === 'technician').length
   };
+}
+
+function getIncidentStats(incidentList) {
+  const initial = { total: incidentList.length, creadas: 0, enCurso: 0, resueltas: 0, cerradas: 0, criticas: 0 };
+  return incidentList.reduce((acc, incident) => {
+    if (incident.state === 'creada') acc.creadas += 1;
+    if (incident.state === 'en_curso') acc.enCurso += 1;
+    if (incident.state === 'resuelta') acc.resueltas += 1;
+    if (incident.state === 'cerrada') acc.cerradas += 1;
+    if (incident.priority === 'critica') acc.criticas += 1;
+    return acc;
+  }, initial);
 }
 
 function getRoleBadgeClass(role) {
@@ -72,9 +79,66 @@ async function loadUsers() {
   users = await response.json();
 }
 
+async function loadIncidents() {
+  const response = await fetch('/api/incidents');
+  if (!response.ok) {
+    throw new Error('No se pudieron cargar incidencias');
+  }
+
+  incidents = await response.json();
+}
+
+function renderIncidenciasSection() {
+  if (incidents.length === 0) {
+    return `
+      <div class="flex items-center justify-between mb-8">
+        <h1 class="text-3xl font-bold text-slate-900">
+          Incidencias <span class="text-slate-400 text-xl">(0)</span>
+        </h1>
+      </div>
+      <div class="flex flex-col items-center justify-center text-center py-20 text-slate-400">
+        <i data-lucide="inbox" style="width:46px;height:46px;" class="mb-4"></i>
+        <p class="text-lg font-semibold text-slate-400">No hay incidencias</p>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="flex items-center justify-between mb-8">
+      <h1 class="text-3xl font-bold text-slate-900">
+        Incidencias <span class="text-slate-400 text-xl">(${incidents.length})</span>
+      </h1>
+      <button id="new-incident-admin-btn" class="px-4 py-2 rounded-xl text-white font-semibold" style="background:#1468f5;">Nueva</button>
+    </div>
+
+    <div class="space-y-4">
+      ${incidents.map(incident => `
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+          <div class="flex items-center justify-between gap-4">
+            <div>
+              <h3 class="font-semibold text-slate-900">${incident.title}</h3>
+              <p class="text-sm text-slate-600 mt-1">${incident.description}</p>
+              <p class="text-xs text-slate-400 mt-2">
+                #${incident.id} · ${incident.creatorDni} · ${incident.category.toUpperCase()} · ${incident.priority.toUpperCase()} · ${incident.ubicacion.municipio}, ${incident.ubicacion.calle} ${incident.ubicacion.numero}
+              </p>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-600">${stateLabelMap[incident.state] || incident.state}</span>
+              <select class="incident-state-select px-3 py-2 rounded-xl border border-slate-300 text-sm" data-id="${incident.id}">
+                ${allStates.map(state => `<option value="${state}" ${incident.state.toUpperCase() === state ? 'selected' : ''}>${state}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
 function renderAdminDashboard() {
   const app = document.getElementById('app');
   const roleStats = getUserRoleStats(users);
+  const incidentStats = getIncidentStats(incidents);
 
   app.innerHTML = `
     <div class="min-h-full bg-surface-50">
@@ -115,17 +179,7 @@ function renderAdminDashboard() {
 
       <main class="px-3 py-6">
         <section id="incidencias" class="tab-content">
-          <div class="flex items-center justify-between mb-8">
-            <h1 class="text-3xl font-bold text-slate-900">
-              Incidencias <span class="text-slate-400 text-xl">(0)</span>
-            </h1>
-          </div>
-
-          <div class="flex flex-col items-center justify-center text-center py-20 text-slate-400">
-            <i data-lucide="inbox" style="width:46px;height:46px;" class="mb-4"></i>
-            <p class="text-lg font-semibold text-slate-400">No hay incidencias</p>
-            <p class="text-sm mt-1">Ajusta los filtros o espera nuevos reportes</p>
-          </div>
+          ${renderIncidenciasSection()}
         </section>
 
         <section id="usuarios" class="tab-content hidden">
@@ -150,14 +204,10 @@ function renderAdminDashboard() {
                 </div>
 
                 <div class="flex items-center gap-3">
-                  <span class="px-3 py-1 rounded-full text-xs font-semibold ${getRoleBadgeClass(user.role)}">
-                    ${getRoleLabel(user.role)}
-                  </span>
-
+                  <span class="px-3 py-1 rounded-full text-xs font-semibold ${getRoleBadgeClass(user.role)}">${getRoleLabel(user.role)}</span>
                   <button class="edit-user-btn text-slate-400 hover:text-slate-600" data-dni="${user.dni}" title="Editar">
                     <i data-lucide="pencil" style="width:16px;height:16px;"></i>
                   </button>
-
                   <button class="delete-user-btn text-rose-400 hover:text-rose-600" data-dni="${user.dni}" title="Eliminar">
                     <i data-lucide="trash-2" style="width:16px;height:16px;"></i>
                   </button>
@@ -170,92 +220,22 @@ function renderAdminDashboard() {
         <section id="estadisticas" class="tab-content hidden">
           <div class="max-w-5xl mx-auto">
             <h1 class="text-4xl font-bold text-slate-900 mb-8">Estadisticas</h1>
-
             <div class="grid grid-cols-6 gap-4 mb-6">
-              <div class="bg-white rounded-2xl border border-slate-200 p-4 text-center">
-                <p class="text-3xl font-bold text-slate-900">${demoStats.total}</p>
-                <span class="inline-block mt-2 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-500">Total</span>
-              </div>
-
-              <div class="bg-white rounded-2xl border border-slate-200 p-4 text-center">
-                <p class="text-3xl font-bold text-slate-900">${demoStats.pendientes}</p>
-                <span class="inline-block mt-2 px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Pendientes</span>
-              </div>
-
-              <div class="bg-white rounded-2xl border border-slate-200 p-4 text-center">
-                <p class="text-3xl font-bold text-slate-900">${demoStats.enProgreso}</p>
-                <span class="inline-block mt-2 px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">En progreso</span>
-              </div>
-
-              <div class="bg-white rounded-2xl border border-slate-200 p-4 text-center">
-                <p class="text-3xl font-bold text-slate-900">${demoStats.resueltas}</p>
-                <span class="inline-block mt-2 px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">Resueltas</span>
-              </div>
-
-              <div class="bg-white rounded-2xl border border-slate-200 p-4 text-center">
-                <p class="text-3xl font-bold text-slate-900">${demoStats.cerradas}</p>
-                <span class="inline-block mt-2 px-3 py-1 rounded-full text-xs font-medium bg-slate-200 text-slate-600">Cerradas</span>
-              </div>
-
-              <div class="bg-white rounded-2xl border border-slate-200 p-4 text-center">
-                <p class="text-3xl font-bold text-slate-900">${demoStats.urgentes}</p>
-                <span class="inline-block mt-2 px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">Urgentes</span>
-              </div>
+              <div class="bg-white rounded-2xl border border-slate-200 p-4 text-center"><p class="text-3xl font-bold text-slate-900">${incidentStats.total}</p><span class="inline-block mt-2 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-500">Total</span></div>
+              <div class="bg-white rounded-2xl border border-slate-200 p-4 text-center"><p class="text-3xl font-bold text-slate-900">${incidentStats.creadas}</p><span class="inline-block mt-2 px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Creadas</span></div>
+              <div class="bg-white rounded-2xl border border-slate-200 p-4 text-center"><p class="text-3xl font-bold text-slate-900">${incidentStats.enCurso}</p><span class="inline-block mt-2 px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">En curso</span></div>
+              <div class="bg-white rounded-2xl border border-slate-200 p-4 text-center"><p class="text-3xl font-bold text-slate-900">${incidentStats.resueltas}</p><span class="inline-block mt-2 px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">Resueltas</span></div>
+              <div class="bg-white rounded-2xl border border-slate-200 p-4 text-center"><p class="text-3xl font-bold text-slate-900">${incidentStats.cerradas}</p><span class="inline-block mt-2 px-3 py-1 rounded-full text-xs font-medium bg-slate-200 text-slate-600">Cerradas</span></div>
+              <div class="bg-white rounded-2xl border border-slate-200 p-4 text-center"><p class="text-3xl font-bold text-slate-900">${incidentStats.criticas}</p><span class="inline-block mt-2 px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">Criticas</span></div>
             </div>
 
-            <div class="grid grid-cols-2 gap-4">
-              <div class="bg-white rounded-2xl border border-slate-200 p-4">
-                <h2 class="text-sm font-bold tracking-wide uppercase text-slate-500 mb-4">Por categoria</h2>
-
-                <div class="space-y-3">
-                  ${demoStats.categorias.map(cat => `
-                    <div class="flex items-center justify-between border-b border-slate-100 pb-2 last:border-b-0">
-                      <div class="flex items-center gap-2 text-slate-600">
-                        <i data-lucide="${cat.icon}" style="width:15px;height:15px;"></i>
-                        <span>${cat.nombre}</span>
-                      </div>
-                      <span class="font-semibold text-slate-900">${cat.valor}</span>
-                    </div>
-                  `).join('')}
-                </div>
-              </div>
-
-              <div class="bg-white rounded-2xl border border-slate-200 p-4">
-                <h2 class="text-sm font-bold tracking-wide uppercase text-slate-500 mb-4">Usuarios por rol</h2>
-
-                <div class="space-y-3">
-                  <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2 text-slate-600">
-                      <i data-lucide="shield" style="width:15px;height:15px;"></i>
-                      <span>Administrador</span>
-                    </div>
-                    <span class="font-semibold text-slate-900">${roleStats.admin}</span>
-                  </div>
-
-                  <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2 text-slate-600">
-                      <i data-lucide="user" style="width:15px;height:15px;"></i>
-                      <span>Usuario</span>
-                    </div>
-                    <span class="font-semibold text-slate-900">${roleStats.user}</span>
-                  </div>
-
-                  <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2 text-slate-600">
-                      <i data-lucide="wrench" style="width:15px;height:15px;"></i>
-                      <span>Operario</span>
-                    </div>
-                    <span class="font-semibold text-slate-900">${roleStats.operator}</span>
-                  </div>
-
-                  <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2 text-slate-600">
-                      <i data-lucide="briefcase" style="width:15px;height:15px;"></i>
-                      <span>Tecnico</span>
-                    </div>
-                    <span class="font-semibold text-slate-900">${roleStats.technician}</span>
-                  </div>
-                </div>
+            <div class="bg-white rounded-2xl border border-slate-200 p-4">
+              <h2 class="text-sm font-bold tracking-wide uppercase text-slate-500 mb-4">Usuarios por rol</h2>
+              <div class="space-y-3">
+                <div class="flex items-center justify-between"><span class="text-slate-600">Administrador</span><span class="font-semibold text-slate-900">${roleStats.admin}</span></div>
+                <div class="flex items-center justify-between"><span class="text-slate-600">Usuario</span><span class="font-semibold text-slate-900">${roleStats.user}</span></div>
+                <div class="flex items-center justify-between"><span class="text-slate-600">Operario</span><span class="font-semibold text-slate-900">${roleStats.operator}</span></div>
+                <div class="flex items-center justify-between"><span class="text-slate-600">Tecnico</span><span class="font-semibold text-slate-900">${roleStats.technician}</span></div>
               </div>
             </div>
           </div>
@@ -277,7 +257,6 @@ function renderAdminDashboard() {
 
 function openTab(target, buttons, contents) {
   activeTab = target;
-
   contents.forEach(c => c.classList.add('hidden'));
   document.getElementById(target).classList.remove('hidden');
 
@@ -295,20 +274,28 @@ function openTab(target, buttons, contents) {
   }
 }
 
-async function editUser(dni) {
-  window.location.href = `/admin-user-edit?dni=${encodeURIComponent(dni)}`;
+async function updateIncidentState(id, state) {
+  const response = await fetch(`/api/incidents/${encodeURIComponent(id)}/state`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ state })
+  });
+
+  if (!response.ok) {
+    alert('No se pudo cambiar el estado');
+    return;
+  }
+
+  await loadIncidents();
+  activeTab = 'incidencias';
+  renderAdminDashboard();
 }
 
 async function deleteUser(dni) {
   const confirmed = confirm(`¿Seguro que quieres eliminar el usuario ${dni}?`);
-  if (!confirmed) {
-    return;
-  }
+  if (!confirmed) return;
 
-  const response = await fetch(`/api/users/${encodeURIComponent(dni)}`, {
-    method: 'DELETE'
-  });
-
+  const response = await fetch(`/api/users/${encodeURIComponent(dni)}`, { method: 'DELETE' });
   if (!response.ok) {
     const message = await response.text();
     alert(message || 'No se pudo eliminar el usuario');
@@ -332,14 +319,25 @@ function attachAdminEvents() {
   });
 
   buttons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      openTab(btn.dataset.tab, buttons, contents);
+    btn.addEventListener('click', () => openTab(btn.dataset.tab, buttons, contents));
+  });
+
+  const newIncidentAdminBtn = document.getElementById('new-incident-admin-btn');
+  if (newIncidentAdminBtn) {
+    newIncidentAdminBtn.addEventListener('click', () => {
+      window.location.href = '/new-incident';
+    });
+  }
+
+  document.querySelectorAll('.incident-state-select').forEach(select => {
+    select.addEventListener('change', async () => {
+      await updateIncidentState(select.dataset.id, select.value);
     });
   });
 
   document.querySelectorAll('.edit-user-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      await editUser(btn.dataset.dni);
+    btn.addEventListener('click', () => {
+      window.location.href = `/admin-user-edit?dni=${encodeURIComponent(btn.dataset.dni)}`;
     });
   });
 
@@ -358,7 +356,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    await loadUsers();
+    await Promise.all([loadUsers(), loadIncidents()]);
     renderAdminDashboard();
   } catch (error) {
     localStorage.removeItem('currentUser');
