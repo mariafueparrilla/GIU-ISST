@@ -111,15 +111,15 @@ function renderNewIncident() {
                 </div>
                 <div>
                   <label class="block text-sm font-semibold text-slate-700 mb-2">Codigo postal</label>
-                  <input id="ubicacion-cp" type="number" required class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-surface-50 text-sm text-slate-700" />
+                  <input id="ubicacion-cp" type="text" maxlength="5" inputmode="numeric" pattern="[0-9]{5}" required class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-surface-50 text-sm text-slate-700" />
                 </div>
                 <div>
                   <label class="block text-sm font-semibold text-slate-700 mb-2">Latitud</label>
-                  <input id="ubicacion-lat" type="number" step="any" required class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-surface-50 text-sm text-slate-700" />
+                  <input id="ubicacion-lat" type="number" step="any"  min="-90" max="90" required class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-surface-50 text-sm text-slate-700" />
                 </div>
                 <div>
                   <label class="block text-sm font-semibold text-slate-700 mb-2">Longitud</label>
-                  <input id="ubicacion-lon" type="number" step="any" required class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-surface-50 text-sm text-slate-700" />
+                  <input id="ubicacion-lon" type="number" step="any" min="-180" max="180" required class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-surface-50 text-sm text-slate-700" />
                 </div>
               </div>
 
