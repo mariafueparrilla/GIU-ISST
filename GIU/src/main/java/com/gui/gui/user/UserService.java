@@ -13,10 +13,17 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+/**
+ * Servicio de dominio para usuarios.
+ * Aqui vive la logica de validacion y negocio, separada del controlador.
+ */
 @Service
 public class UserService {
 
+    /** Acceso persistente a la tabla de usuarios. */
     private final UserRepository userRepository;
+
+    /** Encoder BCrypt para comparar y almacenar passwords de forma segura. */
     private final PasswordEncoder passwordEncoder;
 
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
@@ -24,22 +31,36 @@ public class UserService {
         this.passwordEncoder = passwordEncoder;
     }
 
+    /**
+     * Autentica por DNI y password.
+     *
+     * @throws ResponseStatusException 400 si faltan datos, 401 si credenciales invalidas.
+     */
     public LoginResponse authenticate(LoginRequest request) {
+        // Validar payload minimo de login.
         if (request == null || isBlank(request.dni()) || isBlank(request.password())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "DNI y password son obligatorios");
         }
 
+        // Normalizar DNI para comparacion consistente.
         String normalizedDni = request.dni().trim().toUpperCase(Locale.ROOT);
+
+        // Buscar usuario en BD.
         UserEntity user = userRepository.findById(normalizedDni)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciales incorrectas"));
 
+        // Verificar password en hash BCrypt.
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciales incorrectas");
         }
 
+        // Devolver solo datos necesarios para frontend/sesion.
         return new LoginResponse(user.getDni(), user.getName(), user.getRole().name().toLowerCase(Locale.ROOT));
     }
 
+    /**
+     * Lista usuarios ordenados alfabeticamente por nombre.
+     */
     public List<UserResponse> listUsers() {
         return userRepository.findAll()
             .stream()
@@ -48,6 +69,9 @@ public class UserService {
             .toList();
     }
 
+    /**
+     * Crea un usuario nuevo aplicando validaciones y hash de password.
+     */
     public UserResponse createUser(UserCreateRequest request) {
         validateCreateRequest(request);
 
@@ -66,6 +90,9 @@ public class UserService {
         return toResponse(userRepository.save(user));
     }
 
+    /**
+     * Recupera un usuario por DNI.
+     */
     public UserResponse getUserByDni(String dni) {
         if (isBlank(dni)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "dni es obligatorio");
@@ -78,6 +105,9 @@ public class UserService {
         return toResponse(user);
     }
 
+    /**
+     * Actualiza nombre, email y rol de un usuario existente.
+     */
     public UserResponse updateUser(String dni, UserUpdateRequest request) {
         if (isBlank(dni) || request == null || isBlank(request.name()) || isBlank(request.email()) || isBlank(request.role())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "dni, name, email y role son obligatorios");
@@ -95,6 +125,9 @@ public class UserService {
         return toResponse(userRepository.save(user));
     }
 
+    /**
+     * Elimina usuario por DNI, impidiendo auto-eliminacion del admin logueado.
+     */
     public void deleteUser(String dni, String requesterDni) {
         if (isBlank(dni)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "dni es obligatorio");
@@ -114,6 +147,9 @@ public class UserService {
         userRepository.deleteById(normalizedDni);
     }
 
+    /**
+     * Consulta datos del usuario autenticado por su DNI de sesion.
+     */
     public LoginResponse getUserForSession(String dni) {
         if (isBlank(dni)) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sesion no valida");
@@ -126,6 +162,9 @@ public class UserService {
         return new LoginResponse(user.getDni(), user.getName(), user.getRole().name().toLowerCase(Locale.ROOT));
     }
 
+    /**
+     * Validaciones de alta de usuario.
+     */
     private void validateCreateRequest(UserCreateRequest request) {
         if (request == null || isBlank(request.dni()) || isBlank(request.name()) || isBlank(request.email()) || isBlank(request.password()) || isBlank(request.role())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "dni, name, email, password y role son obligatorios");
@@ -143,6 +182,9 @@ public class UserService {
         validateEmail(request.email());
     }
 
+    /**
+     * Validacion basica de formato email.
+     */
     private void validateEmail(String email) {
         String normalizedEmail = email.trim();
         if (!normalizedEmail.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")) {
@@ -150,6 +192,9 @@ public class UserService {
         }
     }
 
+    /**
+     * Convierte el valor textual del rol a enum de dominio.
+     */
     private UserRole parseRole(String roleValue) {
         try {
             return UserRole.valueOf(roleValue.trim().toUpperCase(Locale.ROOT));
@@ -158,10 +203,16 @@ public class UserService {
         }
     }
 
+    /**
+     * Mapea entidad a DTO para no exponer password.
+     */
     private UserResponse toResponse(UserEntity user) {
         return new UserResponse(user.getDni(), user.getName(), user.getEmail(), user.getRole().name().toLowerCase(Locale.ROOT));
     }
 
+    /**
+     * Helper comun para validar strings vacios o null.
+     */
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
     }

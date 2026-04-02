@@ -17,51 +17,71 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.time.LocalDate;
 
+/**
+ * Entidad principal de incidencia.
+ * Modela los datos funcionales y su ciclo de vida completo.
+ */
 @Entity
 @Table(name = "incidents")
 public class IncidentEntity {
 
+    /** ID tecnico autogenerado (PK). */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /** Titulo corto de la incidencia. */
     @Column(name = "title", nullable = false, length = 160)
     private String title;
 
+    /** Descripcion detallada aportada por el usuario. */
     @Column(name = "description", nullable = false, length = 1200)
     private String description;
 
+    /** Categoria funcional de negocio. */
     @Enumerated(EnumType.STRING)
     @Column(name = "category", nullable = false, length = 30)
     private IncidentCategory category;
 
+    /** Prioridad asignada a la incidencia. */
     @Enumerated(EnumType.STRING)
     @Column(name = "priority", nullable = false, length = 20)
     private IncidentPriority priority;
 
+    /** Estado actual del flujo de tramitacion. */
     @Enumerated(EnumType.STRING)
     @Column(name = "state", nullable = false, length = 20)
     private IncidentState state;
 
+    /** Fecha de creacion (solo dia). */
     @Column(name = "creation_date", nullable = false)
     private LocalDate creationDate;
 
+    /** Instante en que paso a VALIDADA. */
     @Column(name = "validation_date")
     private Instant validationDate;
 
+    /** Instante en que paso a ASIGNADA. */
     @Column(name = "asignation_date")
     private Instant asignationDate;
 
+    /** Instante en que paso a RESUELTA. */
     @Column(name = "resolution_date")
     private Instant resolutionDate;
 
+    /** Instante en que paso a CERRADA. */
     @Column(name = "closing_date")
     private Instant closingDate;
 
+    /** Usuario creador de la incidencia (FK creator_dni). */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "creator_dni", nullable = false)
     private UserEntity creator;
 
+    /**
+     * Ubicacion asociada a la incidencia.
+     * Cascade ALL para persistir/actualizar/eliminar ubicacion junto a la incidencia.
+     */
     @OneToOne(optional = false, cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "ubicacion_id", nullable = false)
     private UbicacionEntity ubicacion;

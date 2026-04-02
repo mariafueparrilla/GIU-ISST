@@ -16,10 +16,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+/**
+ * Servicio de dominio de incidencias.
+ * Encapsula validaciones, creacion, consultas y transiciones de estado.
+ */
 @Service
 public class IncidentService {
 
+    /** Repositorio de incidencias para persistencia y consulta. */
     private final IncidentRepository incidentRepository;
+
+    /** Repositorio de usuarios para resolver el creador de la incidencia. */
     private final UserRepository userRepository;
 
     public IncidentService(IncidentRepository incidentRepository, UserRepository userRepository) {
@@ -27,15 +34,22 @@ public class IncidentService {
         this.userRepository = userRepository;
     }
 
+    /**
+     * Crea una incidencia nueva enlazada al usuario autenticado.
+     */
     @Transactional
     public IncidentResponse createIncident(String creatorDni, IncidentCreateRequest request) {
+        // Validar consistencia de payload.
         validateCreateRequest(request);
 
+        // Resolver creador desde DNI de sesion.
         UserEntity creator = userRepository.findById(normalizeDni(creatorDni))
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no valido"));
 
+        // Construir entidad de ubicacion hija.
         UbicacionEntity ubicacion = toUbicacionEntity(request.ubicacion());
 
+        // Construir entidad principal de incidencia con estado inicial.
         IncidentEntity incident = new IncidentEntity();
         incident.setTitle(request.title().trim());
         incident.setDescription(request.description().trim());
@@ -46,9 +60,13 @@ public class IncidentService {
         incident.setCreator(creator);
         incident.setUbicacion(ubicacion);
 
+        // Persistir y mapear a DTO de salida.
         return toResponse(incidentRepository.save(incident));
     }
 
+    /**
+     * Devuelve incidencias del usuario autenticado.
+     */
     @Transactional(readOnly = true)
     public List<IncidentResponse> getIncidentsForUser(String dni) {
         return incidentRepository.findByCreator_DniOrderByCreationDateDescIdDesc(normalizeDni(dni))
@@ -57,6 +75,9 @@ public class IncidentService {
             .toList();
     }
 
+    /**
+     * Devuelve todas las incidencias para vista administrativa.
+     */
     @Transactional(readOnly = true)
     public List<IncidentResponse> getAllIncidents() {
         return incidentRepository.findAll()
@@ -66,6 +87,9 @@ public class IncidentService {
             .toList();
     }
 
+    /**
+     * Actualiza estado de incidencia y registra fechas de hito cuando aplica.
+     */
     @Transactional
     public IncidentResponse updateState(Long incidentId, String stateValue) {
         if (incidentId == null) {
@@ -83,6 +107,8 @@ public class IncidentService {
         incident.setState(newState);
 
         Instant now = Instant.now();
+
+        // Solo se fija la fecha la primera vez que se alcanza cada estado.
         if (newState == IncidentState.VALIDADA && incident.getValidationDate() == null) {
             incident.setValidationDate(now);
         }
@@ -99,6 +125,9 @@ public class IncidentService {
         return toResponse(incidentRepository.save(incident));
     }
 
+    /**
+     * Mapea request de ubicacion a entidad persistente.
+     */
     private UbicacionEntity toUbicacionEntity(IncidentLocationRequest request) {
         UbicacionEntity ubicacion = new UbicacionEntity();
         ubicacion.setMunicipio(request.municipio().trim());
@@ -110,6 +139,9 @@ public class IncidentService {
         return ubicacion;
     }
 
+    /**
+     * Mapea entidad de incidencia a DTO de salida para frontend.
+     */
     private IncidentResponse toResponse(IncidentEntity incident) {
         UbicacionEntity ubicacion = incident.getUbicacion();
         IncidentLocationResponse ubicacionResponse = new IncidentLocationResponse(
@@ -139,6 +171,9 @@ public class IncidentService {
         );
     }
 
+    /**
+     * Valida campos obligatorios y formato basico para crear incidencia.
+     */
     private void validateCreateRequest(IncidentCreateRequest request) {
         if (request == null || isBlank(request.title()) || isBlank(request.description()) || isBlank(request.category()) || isBlank(request.priority()) || request.ubicacion() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "title, description, category, priority y ubicacion son obligatorios");
@@ -149,10 +184,12 @@ public class IncidentService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Todos los campos de ubicacion son obligatorios");
         }
 
+        // Verificacion temprana de enums de negocio.
         parseCategory(request.category());
         parsePriority(request.priority());
     }
 
+    /** Convierte texto de categoria a enum. */
     private IncidentCategory parseCategory(String value) {
         try {
             return IncidentCategory.valueOf(value.trim().toUpperCase(Locale.ROOT));
@@ -161,6 +198,7 @@ public class IncidentService {
         }
     }
 
+    /** Convierte texto de prioridad a enum. */
     private IncidentPriority parsePriority(String value) {
         try {
             return IncidentPriority.valueOf(value.trim().toUpperCase(Locale.ROOT));
@@ -169,6 +207,7 @@ public class IncidentService {
         }
     }
 
+    /** Convierte texto de estado a enum (acepta guion o guion bajo). */
     private IncidentState parseState(String value) {
         String normalized = value.trim().toUpperCase(Locale.ROOT).replace('-', '_');
         try {
@@ -178,6 +217,7 @@ public class IncidentService {
         }
     }
 
+    /** Normaliza y valida DNI de sesion. */
     private String normalizeDni(String dni) {
         if (isBlank(dni)) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no autenticado");
@@ -185,6 +225,7 @@ public class IncidentService {
         return dni.trim().toUpperCase(Locale.ROOT);
     }
 
+    /** Helper para strings null o vacios. */
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
     }

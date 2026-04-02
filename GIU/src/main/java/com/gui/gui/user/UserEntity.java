@@ -7,23 +7,32 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+/**
+ * Entidad JPA que representa un usuario del sistema.
+ * El DNI funciona como clave primaria natural.
+ */
 @Entity
 @Table(name = "users")
 public class UserEntity {
 
+    /** DNI unico del usuario (PK). */
     @Id
     @Column(name = "dni", nullable = false, length = 9)
     private String dni;
 
+    /** Nombre visible en paneles y cabeceras. */
     @Column(name = "name", nullable = false, length = 120)
     private String name;
 
+    /** Correo electronico del usuario para contacto/gestion. */
     @Column(name = "email", nullable = false, length = 160)
     private String email;
 
+    /** Password almacenada en hash BCrypt, nunca en texto plano. */
     @Column(name = "password", nullable = false, length = 200)
     private String password;
 
+    /** Rol funcional del usuario para autorizacion. */
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false, length = 20)
     private UserRole role;
