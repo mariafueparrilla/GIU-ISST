@@ -123,11 +123,6 @@ function renderNewIncident() {
                 </div>
               </div>
 
-              <div>
-                <label class="block text-sm font-semibold text-slate-700 mb-2" for="foto-incidencia">Imagen (opcional)</label>
-                <input type="file" id="foto-incidencia" accept="image/*" class="w-full px-4 py-2 rounded-xl border border-slate-300 bg-surface-50 text-sm text-slate-700 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100" />
-              </div>
-
               <button type="submit" class="w-full py-3 rounded-xl text-white font-bold text-sm transition hover:opacity-90 flex items-center justify-center gap-2" style="background:#1468f5;">
                 <i data-lucide="send" style="width:18px;height:18px;"></i>
                 Enviar incidencia
@@ -161,36 +156,25 @@ function attachNewIncidentEvents() {
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
 
-    // 1. Instanciamos FormData en lugar de un objeto literal
-    const formData = new FormData();
-
-    // 2. Añadimos los datos de texto
-    formData.append('title', document.getElementById('incident-title').value.trim());
-    formData.append('description', document.getElementById('incident-description').value.trim());
-    formData.append('category', document.getElementById('incident-category').value);
-    formData.append('priority', document.getElementById('incident-priority').value);
-
-    // 3. Añadimos el archivo de imagen (si existe)
-    const imageFile = document.getElementById('foto-incidencia').files[0];
-    if (imageFile) {
-      formData.append('image', imageFile);
-    }
-
-    // 4. El objeto ubicación lo pasamos como string JSON
-    const ubicacion = {
-      municipio: document.getElementById('ubicacion-municipio').value.trim(),
-      calle: document.getElementById('ubicacion-calle').value.trim(),
-      numero: Number(document.getElementById('ubicacion-numero').value),
-      codigoPostal: Number(document.getElementById('ubicacion-cp').value),
-      latitud: Number(document.getElementById('ubicacion-lat').value),
-      longitud: Number(document.getElementById('ubicacion-lon').value)
+    const payload = {
+      title: document.getElementById('incident-title').value.trim(),
+      description: document.getElementById('incident-description').value.trim(),
+      category: document.getElementById('incident-category').value,
+      priority: document.getElementById('incident-priority').value,
+      ubicacion: {
+        municipio: document.getElementById('ubicacion-municipio').value.trim(),
+        calle: document.getElementById('ubicacion-calle').value.trim(),
+        numero: Number(document.getElementById('ubicacion-numero').value),
+        codigoPostal: Number(document.getElementById('ubicacion-cp').value),
+        latitud: Number(document.getElementById('ubicacion-lat').value),
+        longitud: Number(document.getElementById('ubicacion-lon').value)
+      }
     };
-    formData.append('ubicacion', JSON.stringify(ubicacion));
 
-    // 5. Enviamos la petición. IMPORTANTE: No se añade el header 'Content-Type'
     const response = await fetch('/api/incidents', {
       method: 'POST',
-      body: formData // Pasamos formData directamente
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     });
 
     if (!response.ok) {
