@@ -2,7 +2,7 @@
 const loginConfig = {
   appTitle: 'urFIX',
   appSubtitle: 'Gestión de incidencias urbanas',
-  loginWelcome: 'Bienvenido de nuevo',
+  loginWelcome: 'Bienvenido/a de nuevo',
   primaryColor: '#1468f5',
   surfaceColor: '#ffffff',
   textColor: '#0f172a'
