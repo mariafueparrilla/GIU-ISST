@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel Técnico - GIU</title>
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Iconos -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+</head>
+
+<body class="bg-slate-100">
+
+  <!-- CONTENEDOR PRINCIPAL -->
+  <div class="max-w-7xl mx-auto p-6">
+
+    <!-- HEADER -->
+    <div class="bg-white rounded-2xl p-6 shadow mb-6">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+
+        <div>
+          <h1 class="text-2xl font-bold" id="tech-name">Nombre Técnico</h1>
+          <p class="text-sm text-slate-500">
+            Equipo: <span id="team-name"></span> · 
+            Especialidad: <span id="team-specialty"></span>
+          </p>
+        </div>
+
+        <div class="text-sm">
+          Estado equipo:
+          <span id="team-status" class="font-bold"></span>
+        </div>
+
+      </div>
+
+      <p class="text-sm text-slate-400 mt-3" id="team-description"></p>
+    </div>
+
+    <!-- MÉTRICAS -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+
+      <div class="bg-white rounded-2xl p-5 shadow text-center">
+        <p class="text-sm text-slate-500">Incidencias activas</p>
+        <p class="text-2xl font-bold text-blue-600" id="active-count">0</p>
+      </div>
+
+      <div class="bg-white rounded-2xl p-5 shadow text-center">
+        <p class="text-sm text-slate-500">Pendientes</p>
+        <p class="text-2xl font-bold text-amber-600" id="pending-count">0</p>
+      </div>
+
+      <div class="bg-white rounded-2xl p-5 shadow text-center">
+        <p class="text-sm text-slate-500">Resueltas hoy</p>
+        <p class="text-2xl font-bold text-emerald-600" id="resolved-today">0</p>
+      </div>
+
+    </div>
+
+    <!-- FILTROS -->
+    <div class="bg-white rounded-2xl p-4 shadow mb-6 flex flex-col md:flex-row gap-3">
+
+      <!-- BUSCADOR -->
+      <input 
+        type="text" 
+        id="team-search"
+        placeholder="Buscar incidencias..."
+        class="flex-1 px-4 py-2 border-2 rounded-xl focus:border-blue-500 outline-none"
+      >
+
+      <!-- FILTRO ESTADO -->
+      <select 
+        id="team-filter-status"
+        class="px-4 py-2 border-2 rounded-xl"
+      >
+        <option value="all">Todos los estados</option>
+        <option value="pending">Pendiente</option>
+        <option value="in_progress">En progreso</option>
+        <option value="resolved">Resuelta</option>
+      </select>
+
+    </div>
+
+    <!-- TABLERO KANBAN -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+      <!-- PENDIENTE -->
+      <div class="bg-white rounded-2xl p-4 shadow">
+        <h3 class="font-bold text-amber-600 mb-3">Pendiente</h3>
+        <div id="pending" class="kanban-column space-y-3 min-h-[300px]"></div>
+      </div>
+
+      <!-- EN PROGRESO -->
+      <div class="bg-white rounded-2xl p-4 shadow">
+        <h3 class="font-bold text-blue-600 mb-3">En progreso</h3>
+        <div id="in_progress" class="kanban-column space-y-3 min-h-[300px]"></div>
+      </div>
+
+      <!-- RESUELTA -->
+      <div class="bg-white rounded-2xl p-4 shadow">
+        <h3 class="font-bold text-emerald-600 mb-3">Resuelta</h3>
+        <div id="resolved" class="kanban-column space-y-3 min-h-[300px]"></div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- JS -->
+  <script src="technician-profile.js"></script>
+
+</body>
+</html>
