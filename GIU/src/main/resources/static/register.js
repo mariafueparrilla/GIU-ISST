@@ -159,35 +159,6 @@ function renderRegister() {
             </div>
 
             <div>
-              <label for="reg-role" class="block text-sm font-semibold mb-1.5 text-slate-600">
-                Rol
-              </label>
-              <select
-                id="reg-role"
-                class="w-full px-4 py-3 rounded-xl border-2 border-surface-200 focus:border-brand-500 transition text-sm bg-surface-50"
-                required
-              >
-                <option value="user">Usuario</option>
-                <option value="operator">Operario</option>
-                <option value="technician">Técnico</option>
-                <option value="admin">Administrador</option>
-              </select>
-            </div>
-
-            <div id="technical-team-wrapper" class="hidden">
-              <label for="reg-technical-team" class="block text-sm font-semibold mb-1.5 text-slate-600">
-                Equipo tecnico
-              </label>
-              <select
-                id="reg-technical-team"
-                class="w-full px-4 py-3 rounded-xl border-2 border-surface-200 focus:border-brand-500 transition text-sm bg-surface-50"
-              >
-                <option value="">Selecciona un equipo</option>
-                ${technicalTeams.map(team => `<option value="${team.value}">${team.label}</option>`).join('')}
-              </select>
-            </div>
-
-            <div>
               <label for="reg-password" class="block text-sm font-semibold mb-1.5 text-slate-600">
                 Contraseña
               </label>
@@ -255,21 +226,7 @@ function attachRegisterEvents() {
   const generateBtn = document.getElementById('generate-password-btn');
   const passwordInput = document.getElementById('reg-password');
   const registerForm = document.getElementById('register-form');
-  const roleSelect = document.getElementById('reg-role');
-  const technicalTeamWrapper = document.getElementById('technical-team-wrapper');
-  const technicalTeamSelect = document.getElementById('reg-technical-team');
 
-  function refreshTechnicalTeamVisibility() {
-    const isTechnician = roleSelect.value === 'technician';
-    technicalTeamWrapper.classList.toggle('hidden', !isTechnician);
-    technicalTeamSelect.required = isTechnician;
-    if (!isTechnician) {
-      technicalTeamSelect.value = '';
-    }
-  }
-
-  refreshTechnicalTeamVisibility();
-  roleSelect.addEventListener('change', refreshTechnicalTeamVisibility);
 
   // Genera una contraseña automáticamente y la coloca en el input
   generateBtn.addEventListener('click', () => {
@@ -285,8 +242,6 @@ function attachRegisterEvents() {
     const name = document.getElementById('reg-name').value.trim();
     const surname = document.getElementById('reg-surname').value.trim();
     const email = document.getElementById('reg-email').value.trim();
-    const role = document.getElementById('reg-role').value;
-    const technicalTeam = technicalTeamSelect.value;
     const password = passwordInput.value.trim();
 
     // Validación básica del DNI
@@ -301,11 +256,6 @@ function attachRegisterEvents() {
       return;
     }
 
-    if (role === 'technician' && !technicalTeam) {
-      showToast('Selecciona un equipo tecnico para el tecnico', 'error');
-      return;
-    }
-
     const mergedName = `${name} ${surname}`.trim();
 
     try {
@@ -316,9 +266,9 @@ function attachRegisterEvents() {
           dni,
           name: mergedName,
           email,
-          role,
+          role: user,
           password,
-          technicalTeam: role === 'technician' ? technicalTeam : null
+          technicalTeam: null
         })
       });
 
