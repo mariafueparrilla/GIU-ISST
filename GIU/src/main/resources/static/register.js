@@ -266,7 +266,7 @@ function attachRegisterEvents() {
           dni,
           name: mergedName,
           email,
-          role: user,
+          role: 'user',
           password,
           technicalTeam: null
         })
