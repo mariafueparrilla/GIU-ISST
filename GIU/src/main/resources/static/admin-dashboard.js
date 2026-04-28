@@ -21,6 +21,18 @@ const stateLabelMap = {
 
 const allStates = ['CREADA', 'VALIDADA', 'ASIGNADA', 'EN_CURSO', 'RESUELTA', 'CERRADA'];
 
+const teamLabelMap = {
+  alumbrado: 'Alumbrado',
+  limpieza: 'Limpieza',
+  movilidad: 'Movilidad',
+  agua: 'Agua',
+  residuos: 'Residuos',
+  mobiliario: 'Mobiliario',
+  otros: 'Otros'
+};
+
+const allTeams = Object.keys(teamLabelMap);
+
 function getUserRoleStats(userList) {
   return {
     admin: userList.filter(u => u.role === 'admin').length,
@@ -42,6 +54,22 @@ function getIncidentStats(incidentList) {
   }, initial);
 }
 
+function getTechnicalTeamStats(userList, incidentList) {
+  return allTeams.map((teamKey) => {
+    const technicians = userList.filter((user) => user.role === 'technician' && user.technicalTeam === teamKey);
+    const assignedIncidents = incidentList.filter((incident) => incident.assignedTeam === teamKey);
+    const activeIncidents = assignedIncidents.filter((incident) => incident.state !== 'resuelta' && incident.state !== 'cerrada');
+
+    return {
+      teamKey,
+      teamName: teamLabelMap[teamKey],
+      technicians,
+      assignedCount: assignedIncidents.length,
+      activeCount: activeIncidents.length
+    };
+  });
+}
+
 function getRoleBadgeClass(role) {
   if (role === 'admin') return 'bg-violet-100 text-violet-700';
   if (role === 'operator') return 'bg-sky-100 text-sky-700';
@@ -61,7 +89,7 @@ function getRoleIcon(role) {
 }
 
 async function loadSessionUser() {
-  const response = await fetch('/api/auth/me');
+  const response = await fetch('/api/auth/me', { credentials: 'same-origin' });
   if (!response.ok) {
     throw new Error('Sesion no valida');
   }
@@ -71,7 +99,7 @@ async function loadSessionUser() {
 }
 
 async function loadUsers() {
-  const response = await fetch('/api/users');
+  const response = await fetch('/api/users', { credentials: 'same-origin' });
   if (!response.ok) {
     throw new Error('No se pudieron cargar usuarios');
   }
@@ -80,7 +108,7 @@ async function loadUsers() {
 }
 
 async function loadIncidents() {
-  const response = await fetch('/api/incidents');
+  const response = await fetch('/api/incidents', { credentials: 'same-origin' });
   if (!response.ok) {
     throw new Error('No se pudieron cargar incidencias');
   }
@@ -121,12 +149,10 @@ function renderIncidenciasSection() {
               <p class="text-xs text-slate-400 mt-2">
                 #${incident.id} · ${incident.creatorDni} · ${incident.category.toUpperCase()} · ${incident.priority.toUpperCase()} · ${incident.ubicacion.municipio}, ${incident.ubicacion.calle} ${incident.ubicacion.numero}
               </p>
+              <p class="text-xs text-slate-400 mt-1">Equipo tecnico: ${(incident.assignedTeam || 'sin_asignar').toUpperCase()}</p>
             </div>
             <div class="flex items-center gap-2">
               <span class="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-600">${stateLabelMap[incident.state] || incident.state}</span>
-              <select class="incident-state-select px-3 py-2 rounded-xl border border-slate-300 text-sm" data-id="${incident.id}">
-                ${allStates.map(state => `<option value="${state}" ${incident.state.toUpperCase() === state ? 'selected' : ''}>${state}</option>`).join('')}
-              </select>
             </div>
           </div>
         </div>
@@ -139,6 +165,7 @@ function renderAdminDashboard() {
   const app = document.getElementById('app');
   const roleStats = getUserRoleStats(users);
   const incidentStats = getIncidentStats(incidents);
+  const teamStats = getTechnicalTeamStats(users, incidents);
 
   app.innerHTML = `
     <div class="min-h-full bg-surface-50">
@@ -151,6 +178,7 @@ function renderAdminDashboard() {
         </div>
 
         <div class="flex items-center gap-3 text-sm text-slate-600">
+          <button id="switch-user-mode-btn" class="px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50">Modo ciudadano</button>
           <i data-lucide="shield" style="width:16px;height:16px;"></i>
           <span>${currentUser?.name || 'Admin'}</span>
           <span class="px-2 py-1 rounded-full bg-brand-100 text-brand-600 font-medium">${getRoleLabel(currentUser?.role || 'admin')}</span>
@@ -169,6 +197,11 @@ function renderAdminDashboard() {
         <button class="tab-btn flex items-center gap-2 text-slate-600 hover:text-slate-900 px-2 py-2" data-tab="usuarios">
           <i data-lucide="users" style="width:16px;height:16px;"></i>
           Usuarios
+        </button>
+
+        <button class="tab-btn flex items-center gap-2 text-slate-600 hover:text-slate-900 px-2 py-2" data-tab="equipos">
+          <i data-lucide="users-round" style="width:16px;height:16px;"></i>
+          Equipos
         </button>
 
         <button class="tab-btn flex items-center gap-2 text-slate-600 hover:text-slate-900 px-2 py-2" data-tab="estadisticas">
@@ -212,6 +245,43 @@ function renderAdminDashboard() {
                     <i data-lucide="trash-2" style="width:16px;height:16px;"></i>
                   </button>
                 </div>
+              </div>
+            `).join('')}
+          </div>
+        </section>
+
+        <section id="equipos" class="tab-content hidden">
+          <div class="flex items-center justify-between mb-6">
+            <h1 class="text-3xl font-bold text-slate-900">Equipos tecnicos</h1>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            ${teamStats.map((team) => `
+              <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                <div class="flex items-center justify-between mb-3">
+                  <h3 class="font-semibold text-slate-900">${team.teamName}</h3>
+                  <span class="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-600">${team.technicians.length} tecnicos</span>
+                </div>
+
+                <p class="text-sm text-slate-500 mb-3">Incidencias asignadas: ${team.assignedCount} · Activas: ${team.activeCount}</p>
+
+                ${team.technicians.length === 0 ? `
+                  <p class="text-sm text-slate-400">No hay tecnicos en este equipo</p>
+                ` : `
+                  <div class="space-y-2">
+                    ${team.technicians.map((technician) => `
+                      <div class="flex items-center justify-between border border-slate-200 rounded-xl px-3 py-2">
+                        <div>
+                          <p class="text-sm font-medium text-slate-800">${technician.name}</p>
+                          <p class="text-xs text-slate-400">${technician.dni}</p>
+                        </div>
+                        <button class="edit-user-btn text-slate-500 hover:text-slate-700" data-dni="${technician.dni}" title="Editar tecnico">
+                          <i data-lucide="pencil" style="width:15px;height:15px;"></i>
+                        </button>
+                      </div>
+                    `).join('')}
+                  </div>
+                `}
               </div>
             `).join('')}
           </div>
@@ -274,23 +344,6 @@ function openTab(target, buttons, contents) {
   }
 }
 
-async function updateIncidentState(id, state) {
-  const response = await fetch(`/api/incidents/${encodeURIComponent(id)}/state`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ state })
-  });
-
-  if (!response.ok) {
-    alert('No se pudo cambiar el estado');
-    return;
-  }
-
-  await loadIncidents();
-  activeTab = 'incidencias';
-  renderAdminDashboard();
-}
-
 async function deleteUser(dni) {
   const confirmed = confirm(`¿Seguro que quieres eliminar el usuario ${dni}?`);
   if (!confirmed) return;
@@ -309,12 +362,21 @@ async function deleteUser(dni) {
 
 function attachAdminEvents() {
   const logoutBtn = document.getElementById('logout-btn');
+  const switchUserModeBtn = document.getElementById('switch-user-mode-btn');
   const buttons = document.querySelectorAll('.tab-btn');
   const contents = document.querySelectorAll('.tab-content');
 
+  if (switchUserModeBtn) {
+    switchUserModeBtn.addEventListener('click', () => {
+      localStorage.setItem('activeRole', 'user');
+      window.location.href = '/dashboard';
+    });
+  }
+
   logoutBtn.addEventListener('click', async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
     localStorage.removeItem('currentUser');
+    localStorage.removeItem('activeRole');
     window.location.href = '/login';
   });
 
@@ -328,12 +390,6 @@ function attachAdminEvents() {
       window.location.href = '/new-incident';
     });
   }
-
-  document.querySelectorAll('.incident-state-select').forEach(select => {
-    select.addEventListener('change', async () => {
-      await updateIncidentState(select.dataset.id, select.value);
-    });
-  });
 
   document.querySelectorAll('.edit-user-btn').forEach(btn => {
     btn.addEventListener('click', () => {

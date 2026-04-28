@@ -179,6 +179,7 @@ function attachLoginEvents() {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({ dni, password })
       });
 
@@ -190,10 +191,15 @@ function attachLoginEvents() {
       showToast(`¡Hola, ${user.name}!`, 'success');
 
       localStorage.setItem('currentUser', JSON.stringify(user));
+      localStorage.setItem('activeRole', user.role || 'user');
 
       setTimeout(() => {
         if (user.role === 'admin') {
           window.location.href = '/admin-dashboard';
+        } else if (user.role === 'operator') {
+          window.location.href = '/operator-dashboard';
+        } else if (user.role === 'technician') {
+          window.location.href = '/technician-profile';
         } else {
           window.location.href = '/dashboard';
         }

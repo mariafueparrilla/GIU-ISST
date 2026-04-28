@@ -8,13 +8,23 @@ const roleMap = {
 };
 
 async function loadSessionUser() {
-  const response = await fetch('/api/auth/me');
+  const response = await fetch('/api/auth/me', { credentials: 'same-origin' });
   if (!response.ok) {
     throw new Error('Sesion no valida');
   }
 
   currentUser = await response.json();
   localStorage.setItem('currentUser', JSON.stringify(currentUser));
+}
+
+function getRoleHomePath() {
+  const activeRole = localStorage.getItem('activeRole');
+  const roleToUse = activeRole || currentUser?.role;
+
+  if (roleToUse === 'admin') return '/admin-dashboard';
+  if (roleToUse === 'operator') return '/operator-dashboard';
+  if (roleToUse === 'technician') return '/technician-profile';
+  return '/dashboard';
 }
 
 function renderNewIncident() {
@@ -150,7 +160,7 @@ function attachNewIncidentEvents() {
   });
 
   backDashboardBtn.addEventListener('click', () => {
-    window.location.href = currentUser?.role === 'admin' ? '/admin-dashboard' : '/dashboard';
+    window.location.href = getRoleHomePath();
   });
 
   form.addEventListener('submit', async (event) => {
@@ -182,7 +192,7 @@ function attachNewIncidentEvents() {
       return;
     }
 
-    window.location.href = currentUser?.role === 'admin' ? '/admin-dashboard' : '/dashboard';
+    window.location.href = getRoleHomePath();
   });
 }
 

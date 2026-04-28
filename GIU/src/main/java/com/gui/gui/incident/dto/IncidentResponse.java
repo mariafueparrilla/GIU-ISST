@@ -12,10 +12,12 @@ import java.time.LocalDate;
  * @param category categoria.
  * @param priority prioridad.
  * @param state estado actual.
+ * @param assignedTeam equipo tecnico asignado.
  * @param creationDate fecha de creacion.
  * @param validationDate instante de validacion.
  * @param asignationDate instante de asignacion.
  * @param resolutionDate instante de resolucion.
+ * @param rejectionDate instante de rechazo.
  * @param closingDate instante de cierre.
  * @param creatorDni dni del usuario creador.
  * @param ubicacion ubicacion asociada.
@@ -27,10 +29,12 @@ public record IncidentResponse(
     String category,
     String priority,
     String state,
+    String assignedTeam,
     LocalDate creationDate,
     Instant validationDate,
     Instant asignationDate,
     Instant resolutionDate,
+    Instant rejectionDate,
     Instant closingDate,
     String creatorDni,
     IncidentLocationResponse ubicacion

@@ -18,19 +18,15 @@ const stateLabelMap = {
 };
 
 async function loadSessionUser() {
-  const response = await fetch("/api/auth/me");
+  const response = await fetch("/api/auth/me", { credentials: "same-origin" });
   if (!response.ok) {
     throw new Error("Sesion no valida");
   }
 
   const userData = await response.json();
 
-  // --- COMPATIBILIDAD TEMPORAL ---
-  // Si tu backend aún no devuelve 'availableRoles', lo fabricamos para que puedas probar.
-  // Si es 'user', solo tiene ['user']. Si es 'technician', tiene ['user', 'technician'].
-  if (!userData.availableRoles) {
-    userData.availableRoles =
-      userData.role === "user" ? ["user"] : ["user", userData.role];
+  if (!Array.isArray(userData.availableRoles) || userData.availableRoles.length === 0) {
+    userData.availableRoles = userData.role === "user" ? ["user"] : ["user", userData.role];
   }
 
   // 1. Buscamos qué rol tiene activo en el navegador
@@ -109,6 +105,16 @@ function renderHeader() {
   `;
 }
 
+function getWorkerLandingPath(workerRole) {
+  if (workerRole === "operator") {
+    return "/operator-dashboard";
+  }
+  if (workerRole === "technician") {
+    return "/technician-profile";
+  }
+  return "/admin-dashboard";
+}
+
 function renderDashboard() {
   const app = document.getElementById("app");
 
@@ -183,7 +189,7 @@ function attachDashboardEvents() {
 
   if (logoutBtn) {
     logoutBtn.addEventListener("click", async () => {
-      await fetch("/api/auth/logout", { method: "POST" });
+      await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
       localStorage.removeItem("currentUser");
       localStorage.removeItem("activeRole"); // Importante limpiar esto al salir
       window.location.href = "/login";
@@ -196,7 +202,7 @@ function attachDashboardEvents() {
         const workerRole =
           currentUser.availableRoles.find((r) => r !== "user") || "operator";
         localStorage.setItem("activeRole", workerRole);
-        window.location.href = "/admin-dashboard";
+        window.location.href = getWorkerLandingPath(workerRole);
       } else {
         localStorage.setItem("activeRole", "user");
         window.location.href = "/dashboard";
@@ -229,7 +235,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Redirección de seguridad
     if (!isActingAsUser && !currentPath.includes("admin")) {
       // Si está en modo trabajador, debe ir a su panel
-      window.location.href = "/admin-dashboard";
+      const workerRole =
+        currentUser.availableRoles.find((r) => r !== "user") || "operator";
+      window.location.href = getWorkerLandingPath(workerRole);
       return;
     }
 

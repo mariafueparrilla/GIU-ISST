@@ -57,4 +57,20 @@ public class WebPageController {
     public String newIncidentPage() {
         return "new-incident";
     }
+
+    /**
+     * Vista del panel de tecnico.
+     */
+    @GetMapping({"/technician-profile", "/technician-profile.html"})
+    public String technicianProfilePage() {
+        return "technician-profile";
+    }
+
+    /**
+     * Vista del panel de operario.
+     */
+    @GetMapping({"/operator-dashboard", "/operator-dashboard.html"})
+    public String operatorDashboardPage() {
+        return "operator-dashboard";
+    }
 }

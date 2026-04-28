@@ -14,6 +14,8 @@ public enum IncidentState {
     EN_CURSO,
     /** Trabajo completado y resuelto. */
     RESUELTA,
+    /** Rechazada por el operario. */
+    RECHAZADA,
     /** Cerrada definitivamente. */
     CERRADA
 }

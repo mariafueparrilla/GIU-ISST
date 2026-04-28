@@ -43,6 +43,11 @@ public class IncidentEntity {
     @Column(name = "category", nullable = false, length = 30)
     private IncidentCategory category;
 
+    /** Equipo tecnico asignado (puede ser null hasta revision operativa). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "assigned_team", length = 30)
+    private IncidentCategory assignedTeam;
+
     /** Prioridad asignada a la incidencia. */
     @Enumerated(EnumType.STRING)
     @Column(name = "priority", nullable = false, length = 20)
@@ -72,6 +77,10 @@ public class IncidentEntity {
     /** Instante en que paso a CERRADA. */
     @Column(name = "closing_date")
     private Instant closingDate;
+
+    /** Instante en que paso a RECHAZADA. */
+    @Column(name = "rejection_date")
+    private Instant rejectionDate;
 
     /** Usuario creador de la incidencia (FK creator_dni). */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -112,6 +121,14 @@ public class IncidentEntity {
 
     public void setCategory(IncidentCategory category) {
         this.category = category;
+    }
+
+    public IncidentCategory getAssignedTeam() {
+        return assignedTeam;
+    }
+
+    public void setAssignedTeam(IncidentCategory assignedTeam) {
+        this.assignedTeam = assignedTeam;
     }
 
     public IncidentPriority getPriority() {
@@ -168,6 +185,14 @@ public class IncidentEntity {
 
     public void setClosingDate(Instant closingDate) {
         this.closingDate = closingDate;
+    }
+
+    public Instant getRejectionDate() {
+        return rejectionDate;
+    }
+
+    public void setRejectionDate(Instant rejectionDate) {
+        this.rejectionDate = rejectionDate;
     }
 
     public UserEntity getCreator() {

@@ -11,8 +11,18 @@ const roleMap = {
   technician: 'Tecnico'
 };
 
+const technicalTeams = [
+  { value: 'alumbrado', label: 'Alumbrado' },
+  { value: 'limpieza', label: 'Limpieza' },
+  { value: 'movilidad', label: 'Movilidad' },
+  { value: 'agua', label: 'Agua' },
+  { value: 'residuos', label: 'Residuos' },
+  { value: 'mobiliario', label: 'Mobiliario' },
+  { value: 'otros', label: 'Otros' }
+];
+
 async function loadSessionUser() {
-  const response = await fetch('/api/auth/me');
+  const response = await fetch('/api/auth/me', { credentials: 'same-origin' });
   if (!response.ok) {
     throw new Error('Sesion no valida');
   }
@@ -112,6 +122,17 @@ function renderEditPage() {
                 </select>
               </div>
 
+              <div id="technical-team-wrapper" class="${targetUser.role === 'technician' ? '' : 'hidden'}">
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Equipo tecnico</label>
+                <select
+                  id="technicalTeam"
+                  class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-surface-50 text-sm text-slate-700"
+                >
+                  <option value="">Selecciona un equipo</option>
+                  ${technicalTeams.map(team => `<option value="${team.value}" ${targetUser.technicalTeam === team.value ? 'selected' : ''}>${team.label}</option>`).join('')}
+                </select>
+              </div>
+
               <div class="flex gap-3 pt-2">
                 <button
                   type="button"
@@ -145,6 +166,21 @@ function attachEvents() {
   const cancelBtn = document.getElementById('cancel-btn');
   const logoutBtn = document.getElementById('logout-btn');
   const form = document.getElementById('edit-user-form');
+  const roleSelect = document.getElementById('role');
+  const technicalTeamWrapper = document.getElementById('technical-team-wrapper');
+  const technicalTeamSelect = document.getElementById('technicalTeam');
+
+  const refreshTeamVisibility = () => {
+    const isTechnician = roleSelect.value === 'technician';
+    technicalTeamWrapper.classList.toggle('hidden', !isTechnician);
+    technicalTeamSelect.required = isTechnician;
+    if (!isTechnician) {
+      technicalTeamSelect.value = '';
+    }
+  };
+
+  roleSelect.addEventListener('change', refreshTeamVisibility);
+  refreshTeamVisibility();
 
   const goBack = () => {
     window.location.href = '/admin-dashboard';
@@ -165,16 +201,27 @@ function attachEvents() {
     const name = document.getElementById('name').value.trim();
     const email = document.getElementById('email').value.trim();
     const role = document.getElementById('role').value;
+    const technicalTeam = technicalTeamSelect.value;
 
     if (!name || !email) {
       alert('Nombre y email son obligatorios');
       return;
     }
 
+    if (role === 'technician' && !technicalTeam) {
+      alert('Selecciona un equipo tecnico para el tecnico');
+      return;
+    }
+
     const response = await fetch(`/api/users/${encodeURIComponent(dni)}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, role })
+      body: JSON.stringify({
+        name,
+        email,
+        role,
+        technicalTeam: role === 'technician' ? technicalTeam : null
+      })
     });
 
     if (!response.ok) {

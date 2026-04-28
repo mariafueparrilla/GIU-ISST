@@ -50,15 +50,22 @@ public class SecurityConfig {
                     "/**/*.css",
                     "/h2-console/**"
                 ).permitAll()
-                // Vistas administrativas restringidas a rol ADMIN.
-                .requestMatchers("/admin-dashboard", "/admin-dashboard.html", "/admin-user-edit", "/admin-user-edit.html").hasRole("ADMIN")
-                // Vistas funcionales de usuario: cualquier autenticado.
+                // Vistas de aplicación: se dejan accesibles a cualquier sesión autenticada.
+                // La propia UI redirige según el rol real del usuario.
+                .requestMatchers("/admin-dashboard", "/admin-dashboard.html", "/admin-user-edit", "/admin-user-edit.html").authenticated()
                 .requestMatchers("/dashboard", "/dashboard.html", "/new-incident", "/new-incident.html").authenticated()
+                .requestMatchers("/technician-profile", "/technician-profile.html").authenticated()
+                .requestMatchers("/operator-dashboard", "/operator-dashboard.html").authenticated()
                 // API de usuarios solo para admin.
                 .requestMatchers("/api/users/**").hasRole("ADMIN")
                 // API de incidencias de administracion.
-                .requestMatchers(HttpMethod.GET, "/api/incidents").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PATCH, "/api/incidents/*/state").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/incidents").hasAnyRole("ADMIN", "OPERATOR")
+                .requestMatchers(HttpMethod.PATCH, "/api/incidents/*/state").hasRole("OPERATOR")
+                // API de revision operativa.
+                .requestMatchers(HttpMethod.PATCH, "/api/incidents/*/assign-team").hasRole("OPERATOR")
+                // API de incidencias de equipo tecnico.
+                .requestMatchers(HttpMethod.GET, "/api/incidents/team/my").hasRole("TECHNICIAN")
+                .requestMatchers(HttpMethod.PATCH, "/api/incidents/*/team-state").hasRole("TECHNICIAN")
                 // API de incidencias de usuario autenticado.
                 .requestMatchers(HttpMethod.GET, "/api/incidents/my").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/incidents").authenticated()

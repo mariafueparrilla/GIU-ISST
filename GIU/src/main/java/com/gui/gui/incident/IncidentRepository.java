@@ -13,4 +13,9 @@ public interface IncidentRepository extends JpaRepository<IncidentEntity, Long> 
      * Devuelve incidencias de un usuario ordenadas por fecha e id descendente.
      */
     List<IncidentEntity> findByCreator_DniOrderByCreationDateDescIdDesc(String creatorDni);
+
+    /**
+     * Devuelve incidencias asignadas a un equipo tecnico ordenadas descendente.
+     */
+    List<IncidentEntity> findByAssignedTeamOrderByCreationDateDescIdDesc(IncidentCategory assignedTeam);
 }

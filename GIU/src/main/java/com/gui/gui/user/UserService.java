@@ -1,5 +1,6 @@
 package com.gui.gui.user;
 
+import com.gui.gui.incident.IncidentCategory;
 import com.gui.gui.user.dto.LoginRequest;
 import com.gui.gui.user.dto.LoginResponse;
 import com.gui.gui.user.dto.UserCreateRequest;
@@ -8,7 +9,9 @@ import com.gui.gui.user.dto.UserUpdateRequest;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import org.springframework.http.HttpStatus;
+import org.springframework.lang.NonNull;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -46,7 +49,7 @@ public class UserService {
         String normalizedDni = request.dni().trim().toUpperCase(Locale.ROOT);
 
         // Buscar usuario en BD.
-        UserEntity user = userRepository.findById(normalizedDni)
+        UserEntity user = userRepository.findById(requireNonNull(normalizedDni))
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciales incorrectas"));
 
         // Verificar password en hash BCrypt.
@@ -55,7 +58,13 @@ public class UserService {
         }
 
         // Devolver solo datos necesarios para frontend/sesion.
-        return new LoginResponse(user.getDni(), user.getName(), user.getRole().name().toLowerCase(Locale.ROOT));
+        return new LoginResponse(
+            user.getDni(),
+            user.getName(),
+            user.getRole().name().toLowerCase(Locale.ROOT),
+            toTechnicalTeamValue(user),
+            buildAvailableRoles(user.getRole())
+        );
     }
 
     /**
@@ -76,7 +85,7 @@ public class UserService {
         validateCreateRequest(request);
 
         String normalizedDni = request.dni().trim().toUpperCase(Locale.ROOT);
-        if (userRepository.existsById(normalizedDni)) {
+        if (userRepository.existsById(requireNonNull(normalizedDni))) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe un usuario con ese DNI");
         }
 
@@ -85,7 +94,9 @@ public class UserService {
         user.setName(request.name().trim());
         user.setEmail(request.email().trim().toLowerCase(Locale.ROOT));
         user.setPassword(passwordEncoder.encode(request.password()));
-        user.setRole(parseRole(request.role()));
+        UserRole role = parseRole(request.role());
+        user.setRole(role);
+        user.setTechnicalTeam(resolveTechnicalTeam(role, request.technicalTeam()));
 
         return toResponse(userRepository.save(user));
     }
@@ -99,7 +110,7 @@ public class UserService {
         }
 
         String normalizedDni = dni.trim().toUpperCase(Locale.ROOT);
-        UserEntity user = userRepository.findById(normalizedDni)
+        UserEntity user = userRepository.findById(requireNonNull(normalizedDni))
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
 
         return toResponse(user);
@@ -114,13 +125,15 @@ public class UserService {
         }
 
         String normalizedDni = dni.trim().toUpperCase(Locale.ROOT);
-        UserEntity user = userRepository.findById(normalizedDni)
+        UserEntity user = userRepository.findById(requireNonNull(normalizedDni))
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
 
         validateEmail(request.email());
         user.setName(request.name().trim());
         user.setEmail(request.email().trim().toLowerCase(Locale.ROOT));
-        user.setRole(parseRole(request.role()));
+        UserRole role = parseRole(request.role());
+        user.setRole(role);
+        user.setTechnicalTeam(resolveTechnicalTeam(role, request.technicalTeam()));
 
         return toResponse(userRepository.save(user));
     }
@@ -140,11 +153,11 @@ public class UserService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No puedes eliminar tu propio usuario");
         }
 
-        if (!userRepository.existsById(normalizedDni)) {
+        if (!userRepository.existsById(requireNonNull(normalizedDni))) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado");
         }
 
-        userRepository.deleteById(normalizedDni);
+        userRepository.deleteById(requireNonNull(normalizedDni));
     }
 
     /**
@@ -156,10 +169,16 @@ public class UserService {
         }
 
         String normalizedDni = dni.trim().toUpperCase(Locale.ROOT);
-        UserEntity user = userRepository.findById(normalizedDni)
+        UserEntity user = userRepository.findById(requireNonNull(normalizedDni))
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sesion no valida"));
 
-        return new LoginResponse(user.getDni(), user.getName(), user.getRole().name().toLowerCase(Locale.ROOT));
+        return new LoginResponse(
+            user.getDni(),
+            user.getName(),
+            user.getRole().name().toLowerCase(Locale.ROOT),
+            toTechnicalTeamValue(user),
+            buildAvailableRoles(user.getRole())
+        );
     }
 
     /**
@@ -207,7 +226,55 @@ public class UserService {
      * Mapea entidad a DTO para no exponer password.
      */
     private UserResponse toResponse(UserEntity user) {
-        return new UserResponse(user.getDni(), user.getName(), user.getEmail(), user.getRole().name().toLowerCase(Locale.ROOT));
+        return new UserResponse(
+            user.getDni(),
+            user.getName(),
+            user.getEmail(),
+            user.getRole().name().toLowerCase(Locale.ROOT),
+            toTechnicalTeamValue(user)
+        );
+    }
+
+    /** Resuelve y valida el equipo tecnico cuando el rol es TECHNICIAN. */
+    private IncidentCategory resolveTechnicalTeam(UserRole role, String technicalTeamValue) {
+        if (role != UserRole.TECHNICIAN) {
+            return null;
+        }
+        if (isBlank(technicalTeamValue)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "technicalTeam es obligatorio para rol technician");
+        }
+        return parseTechnicalTeam(technicalTeamValue);
+    }
+
+    /** Convierte texto de equipo tecnico a enum IncidentCategory. */
+    private IncidentCategory parseTechnicalTeam(String technicalTeamValue) {
+        try {
+            return IncidentCategory.valueOf(technicalTeamValue.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Equipo tecnico invalido");
+        }
+    }
+
+    /** Convierte el equipo tecnico de entidad al formato de salida. */
+    private String toTechnicalTeamValue(UserEntity user) {
+        if (user.getTechnicalTeam() == null) {
+            return null;
+        }
+        return user.getTechnicalTeam().name().toLowerCase(Locale.ROOT);
+    }
+
+    /** Define los roles activables por cada rol principal. */
+    private List<String> buildAvailableRoles(UserRole role) {
+        if (role == UserRole.ADMIN) {
+            return List.of("user", "admin");
+        }
+        if (role == UserRole.OPERATOR) {
+            return List.of("user", "operator");
+        }
+        if (role == UserRole.TECHNICIAN) {
+            return List.of("user", "technician");
+        }
+        return List.of("user");
     }
 
     /**
@@ -215,5 +282,10 @@ public class UserService {
      */
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
+    }
+
+    /** Adapta cadenas ya validadas a firmas anotadas como non-null. */
+    private @NonNull String requireNonNull(String value) {
+        return Objects.requireNonNull(value);
     }
 }

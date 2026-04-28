@@ -1,5 +1,6 @@
 package com.gui.gui.user;
 
+import com.gui.gui.incident.IncidentCategory;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -36,6 +37,11 @@ public class UserEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false, length = 20)
     private UserRole role;
+
+    /** Equipo tecnico del usuario (solo aplica a rol TECHNICIAN). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "technical_team", length = 30)
+    private IncidentCategory technicalTeam;
 
     public String getDni() {
         return dni;
@@ -75,5 +81,13 @@ public class UserEntity {
 
     public void setRole(UserRole role) {
         this.role = role;
+    }
+
+    public IncidentCategory getTechnicalTeam() {
+        return technicalTeam;
+    }
+
+    public void setTechnicalTeam(IncidentCategory technicalTeam) {
+        this.technicalTeam = technicalTeam;
     }
 }
