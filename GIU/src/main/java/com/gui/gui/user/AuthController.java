@@ -70,7 +70,15 @@ public class AuthController {
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     public UserResponse register(@RequestBody UserCreateRequest request) {
-        return userService.createUser(request);
+        UserCreateRequest safeRequest = new UserCreateRequest(
+            request.dni(),
+            request.name(),
+            request.email(),
+            request.password(),
+            "user",
+            null
+        );
+        return userService.createUser(safeRequest);
     }
 
     /**
