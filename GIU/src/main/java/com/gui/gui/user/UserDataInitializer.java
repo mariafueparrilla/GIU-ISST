@@ -90,8 +90,9 @@ public class UserDataInitializer {
             }
 
             // Limpiar incidencias en cada arranque para dejar un tablero de pruebas predecible.
-            incidentRepository.deleteAll();
-            seedIncidents(incidentRepository, userRepository);
+            if (incidentRepository.count() == 0) {
+                seedIncidents(incidentRepository, userRepository);
+            }
         };
     }
 
@@ -120,7 +121,7 @@ public class UserDataInitializer {
                 "Sale agua de un registro y avanza por la acera.",
                 IncidentCategory.AGUA,
                 IncidentPriority.CRITICA,
-                IncidentState.VALIDADA,
+                IncidentState.ASIGNADA,
                 null,
                 technicianCreator,
                 ubicacion("Madrid", "Paseo del Prado", 8, 28014, 40.4138, -3.6922),
@@ -141,9 +142,9 @@ public class UserDataInitializer {
                 ubicacion("Madrid", "Plaza Mayor", 1, 28012, 40.4154, -3.7074),
                 -10,
                 -8,
-                null,
-                null,
-                -1
+                -2,
+                -1,
+                null
             ),
             createIncident(
                 "Contenedor roto en barrio",
@@ -156,7 +157,7 @@ public class UserDataInitializer {
                 ubicacion("Madrid", "Calle Toledo", 90, 28005, 40.4109, -3.7101),
                 -5,
                 -4,
-                -3,
+                null,
                 null,
                 null
             ),
@@ -171,8 +172,8 @@ public class UserDataInitializer {
                 ubicacion("Madrid", "Avenida de América", 25, 28002, 40.4381, -3.6753),
                 -6,
                 -5,
-                -4,
-                -1,
+                null,
+                null,
                 null
             ),
             createIncident(
@@ -187,7 +188,7 @@ public class UserDataInitializer {
                 -12,
                 -10,
                 -8,
-                -2,
+                null,
                 null
             )
         ));
@@ -203,10 +204,10 @@ public class UserDataInitializer {
         UserEntity creator,
         UbicacionEntity ubicacion,
         int daysSinceCreation,
-        Integer daysSinceValidation,
         Integer daysSinceAsignation,
         Integer daysSinceResolution,
-        Integer daysSinceClosing
+        Integer daysSinceClosing,
+        Integer daysSinceRejection
     ) {
         IncidentEntity incident = new IncidentEntity();
         incident.setTitle(title);
@@ -218,18 +219,23 @@ public class UserDataInitializer {
         incident.setCreator(creator);
         incident.setUbicacion(ubicacion);
         incident.setCreationDate(LocalDate.now().plusDays(daysSinceCreation));
+        incident.setCreationInstant(Instant.now().plusSeconds(daysSinceCreation * 24L * 60L * 60L));
 
-        if (daysSinceValidation != null) {
-            incident.setValidationDate(Instant.now().plusSeconds(daysSinceValidation.longValue() * 24L * 60L * 60L));
-        }
         if (daysSinceAsignation != null) {
-            incident.setAsignationDate(Instant.now().plusSeconds(daysSinceAsignation.longValue() * 24L * 60L * 60L));
+            incident.setAsignationDate(Instant.now().plusSeconds(daysSinceAsignation * 24L * 60L * 60L));
+            incident.setAssigner(creator); // Set assigner to creator for seed data
         }
         if (daysSinceResolution != null) {
-            incident.setResolutionDate(Instant.now().plusSeconds(daysSinceResolution.longValue() * 24L * 60L * 60L));
+            incident.setResolutionDate(Instant.now().plusSeconds(daysSinceResolution * 24L * 60L * 60L));
+            incident.setResolver(creator);
         }
         if (daysSinceClosing != null) {
-            incident.setClosingDate(Instant.now().plusSeconds(daysSinceClosing.longValue() * 24L * 60L * 60L));
+            incident.setClosingDate(Instant.now().plusSeconds(daysSinceClosing * 24L * 60L * 60L));
+            incident.setCloser(creator);
+        }
+        if (daysSinceRejection != null) {
+            incident.setRejectionDate(Instant.now().plusSeconds(daysSinceRejection * 24L * 60L * 60L));
+            incident.setRejecter(creator);
         }
 
         return incident;

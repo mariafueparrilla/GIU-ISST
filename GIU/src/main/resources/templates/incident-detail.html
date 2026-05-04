@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>urFIX - Nueva incidencia</title>
+  <title>urFIX - Detalle de incidencia</title>
 
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
@@ -16,8 +16,8 @@
     * { font-family: 'DM Sans', sans-serif; }
     .font-mono-brand { font-family: 'Space Mono', monospace; }
     html, body { height: 100%; margin: 0; }
-    input:focus, button:focus, select:focus, textarea:focus { outline: none; }
-    #map-picker { height: 300px; border-radius: 12px; margin-top: 8px; }
+    input:focus, button:focus { outline: none; }
+    #incident-map { height: 400px; border-radius: 12px; }
   </style>
 
   <script>
@@ -47,6 +47,6 @@
 
 <body class="h-full bg-surface-50 text-dark-900">
   <div id="app" class="h-full w-full"></div>
-  <script src="/new-incident.js"></script>
+  <script src="/incident-detail.js"></script>
 </body>
 </html>

@@ -7,7 +7,7 @@ public enum IncidentState {
     /** Estado inicial al crearla un usuario. */
     CREADA,
     /** Revisada y validada por administracion. */
-    VALIDADA,
+    // VALIDADA removed: flow now goes CREADA -> ASIGNADA or RECHAZADA
     /** Asignada a un responsable. */
     ASIGNADA,
     /** Actualmente en ejecucion de trabajo. */

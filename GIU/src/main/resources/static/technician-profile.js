@@ -278,6 +278,14 @@ function createTechnicianIncidentCard(incident) {
     wrapper.classList.remove("opacity-50");
   });
 
+  // Add click handler for detail view (only if not clicking buttons or select)
+  wrapper.addEventListener("click", (e) => {
+    if (e.target.closest("button") || e.target.closest("select")) {
+      return;
+    }
+    window.location.href = `/incident-detail?id=${incident.id}`;
+  });
+
   return wrapper;
 }
 

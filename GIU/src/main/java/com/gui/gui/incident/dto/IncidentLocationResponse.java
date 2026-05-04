@@ -10,6 +10,8 @@ package com.gui.gui.incident.dto;
  * @param codigoPostal codigo postal.
  * @param latitud latitud.
  * @param longitud longitud.
+ * @param formattedAddress direccion formateada.
+ * @param placeId identificador de lugar.
  */
 public record IncidentLocationResponse(
     Long id,
@@ -18,6 +20,8 @@ public record IncidentLocationResponse(
     Integer numero,
     Integer codigoPostal,
     Double latitud,
-    Double longitud
+    Double longitud,
+    String formattedAddress,
+    String placeId
 ) {
 }

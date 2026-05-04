@@ -9,6 +9,8 @@ package com.gui.gui.incident.dto;
  * @param codigoPostal codigo postal.
  * @param latitud latitud geoespacial.
  * @param longitud longitud geoespacial.
+ * @param formattedAddress direccion formateada (ej: "Calle Mayor, 123, 28001 Madrid").
+ * @param placeId identificador de lugar (Google Maps place ID u otro).
  */
 public record IncidentLocationRequest(
     String municipio,
@@ -16,6 +18,8 @@ public record IncidentLocationRequest(
     Integer numero,
     Integer codigoPostal,
     Double latitud,
-    Double longitud
+    Double longitud,
+    String formattedAddress,
+    String placeId
 ) {
 }

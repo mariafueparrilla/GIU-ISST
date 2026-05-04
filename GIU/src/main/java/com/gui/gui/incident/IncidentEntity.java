@@ -13,9 +13,12 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Entidad principal de incidencia.
@@ -48,9 +51,9 @@ public class IncidentEntity {
     @Column(name = "assigned_team", length = 30)
     private IncidentCategory assignedTeam;
 
-    /** Prioridad asignada a la incidencia. */
+    /** Prioridad asignada a la incidencia (set por operario). */
     @Enumerated(EnumType.STRING)
-    @Column(name = "priority", nullable = false, length = 20)
+    @Column(name = "priority", length = 20)
     private IncidentPriority priority;
 
     /** Estado actual del flujo de tramitacion. */
@@ -62,9 +65,11 @@ public class IncidentEntity {
     @Column(name = "creation_date", nullable = false)
     private LocalDate creationDate;
 
-    /** Instante en que paso a VALIDADA. */
-    @Column(name = "validation_date")
-    private Instant validationDate;
+    /** Instante exacto de creacion con hora. */
+    @Column(name = "creation_instant", nullable = false)
+    private Instant creationInstant;
+
+    // validation_date removed: VALIDADA state removed from flow
 
     /** Instante en que paso a ASIGNADA. */
     @Column(name = "asignation_date")
@@ -87,6 +92,28 @@ public class IncidentEntity {
     @JoinColumn(name = "creator_dni", nullable = false)
     private UserEntity creator;
 
+    // validator removed: VALIDADA actor no longer tracked
+
+    /** Usuario que asigno la incidencia a un equipo. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "assigner_dni")
+    private UserEntity assigner;
+
+    /** Usuario (tecnico) que resolvio la incidencia. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "resolver_dni")
+    private UserEntity resolver;
+
+    /** Usuario que cerro la incidencia. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "closer_dni")
+    private UserEntity closer;
+
+    /** Usuario que rechazo la incidencia. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "rejecter_dni")
+    private UserEntity rejecter;
+
     /**
      * Ubicacion asociada a la incidencia.
      * Cascade ALL para persistir/actualizar/eliminar ubicacion junto a la incidencia.
@@ -94,6 +121,13 @@ public class IncidentEntity {
     @OneToOne(optional = false, cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "ubicacion_id", nullable = false)
     private UbicacionEntity ubicacion;
+
+    /**
+     * Imagenes asociadas a la incidencia (maximo 3).
+     * Cascade ALL + orphanRemoval true para eliminar imagenes cuando se elimina la incidencia.
+     */
+    @OneToMany(mappedBy = "incident", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<IncidentImageEntity> images = new ArrayList<>();
 
     public Long getId() {
         return id;
@@ -155,13 +189,7 @@ public class IncidentEntity {
         this.creationDate = creationDate;
     }
 
-    public Instant getValidationDate() {
-        return validationDate;
-    }
-
-    public void setValidationDate(Instant validationDate) {
-        this.validationDate = validationDate;
-    }
+    // validationDate accessor removed
 
     public Instant getAsignationDate() {
         return asignationDate;
@@ -209,5 +237,55 @@ public class IncidentEntity {
 
     public void setUbicacion(UbicacionEntity ubicacion) {
         this.ubicacion = ubicacion;
+    }
+
+    public List<IncidentImageEntity> getImages() {
+        return images;
+    }
+
+    public void setImages(List<IncidentImageEntity> images) {
+        this.images = images;
+    }
+
+    public Instant getCreationInstant() {
+        return creationInstant;
+    }
+
+    public void setCreationInstant(Instant creationInstant) {
+        this.creationInstant = creationInstant;
+    }
+
+    // validator accessors removed
+
+    public UserEntity getAssigner() {
+        return assigner;
+    }
+
+    public void setAssigner(UserEntity assigner) {
+        this.assigner = assigner;
+    }
+
+    public UserEntity getResolver() {
+        return resolver;
+    }
+
+    public void setResolver(UserEntity resolver) {
+        this.resolver = resolver;
+    }
+
+    public UserEntity getCloser() {
+        return closer;
+    }
+
+    public void setCloser(UserEntity closer) {
+        this.closer = closer;
+    }
+
+    public UserEntity getRejecter() {
+        return rejecter;
+    }
+
+    public void setRejecter(UserEntity rejecter) {
+        this.rejecter = rejecter;
     }
 }

@@ -73,4 +73,12 @@ public class WebPageController {
     public String operatorDashboardPage() {
         return "operator-dashboard";
     }
+
+    /**
+     * Vista de detalle de incidencia.
+     */
+    @GetMapping({"/incident-detail", "/incident-detail.html"})
+    public String incidentDetailPage() {
+        return "incident-detail";
+    }
 }

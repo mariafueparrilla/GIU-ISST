@@ -44,6 +44,14 @@ public class UbicacionEntity {
     @Column(name = "longitud", nullable = false)
     private Double longitud;
 
+    /** Direccion formateada para consultas de mapa y visualizacion. */
+    @Column(name = "formatted_address", nullable = true, length = 500)
+    private String formattedAddress;
+
+    /** Place ID de Google Maps u otro proveedor (para futuro uso). */
+    @Column(name = "place_id", nullable = true, length = 255)
+    private String placeId;
+
     public Long getId() {
         return id;
     }
@@ -94,5 +102,21 @@ public class UbicacionEntity {
 
     public void setLongitud(Double longitud) {
         this.longitud = longitud;
+    }
+
+    public String getFormattedAddress() {
+        return formattedAddress;
+    }
+
+    public void setFormattedAddress(String formattedAddress) {
+        this.formattedAddress = formattedAddress;
+    }
+
+    public String getPlaceId() {
+        return placeId;
+    }
+
+    public void setPlaceId(String placeId) {
+        this.placeId = placeId;
     }
 }

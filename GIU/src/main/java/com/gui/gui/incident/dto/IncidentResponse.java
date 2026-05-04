@@ -1,7 +1,7 @@
 package com.gui.gui.incident.dto;
 
 import java.time.Instant;
-import java.time.LocalDate;
+import java.util.List;
 
 /**
  * DTO de salida de incidencia para UI de usuario y admin.
@@ -13,14 +13,14 @@ import java.time.LocalDate;
  * @param priority prioridad.
  * @param state estado actual.
  * @param assignedTeam equipo tecnico asignado.
- * @param creationDate fecha de creacion.
- * @param validationDate instante de validacion.
+ * @param creationInstant instante de creacion con hora.
  * @param asignationDate instante de asignacion.
  * @param resolutionDate instante de resolucion.
  * @param rejectionDate instante de rechazo.
  * @param closingDate instante de cierre.
  * @param creatorDni dni del usuario creador.
  * @param ubicacion ubicacion asociada.
+ * @param images lista de imagenes asociadas.
  */
 public record IncidentResponse(
     Long id,
@@ -30,13 +30,18 @@ public record IncidentResponse(
     String priority,
     String state,
     String assignedTeam,
-    LocalDate creationDate,
-    Instant validationDate,
+    Instant creationInstant,
     Instant asignationDate,
     Instant resolutionDate,
     Instant rejectionDate,
     Instant closingDate,
     String creatorDni,
-    IncidentLocationResponse ubicacion
+    String creatorName,
+    String assignerDni,
+    String resolverDni,
+    String closerDni,
+    String rejecterDni,
+    IncidentLocationResponse ubicacion,
+    List<IncidentImageResponse> images
 ) {
 }

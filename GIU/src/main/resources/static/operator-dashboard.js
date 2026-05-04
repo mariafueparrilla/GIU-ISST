@@ -12,9 +12,15 @@ const TEAM_OPTIONS = [
   { value: 'OTROS', label: 'Otros' }
 ];
 
+const PRIORITY_OPTIONS = [
+  { value: 'BAJA', label: 'Baja' },
+  { value: 'MEDIA', label: 'Media' },
+  { value: 'ALTA', label: 'Alta' },
+  { value: 'CRITICA', label: 'Crítica' }
+];
+
 const stateLabelMap = {
   creada: 'Creada',
-  validada: 'Validada',
   asignada: 'Asignada',
   en_curso: 'En curso',
   resuelta: 'Resuelta',
@@ -22,15 +28,30 @@ const stateLabelMap = {
   cerrada: 'Cerrada'
 };
 
+const priorityColorMap = {
+  baja: 'bg-slate-100 text-slate-700',
+  media: 'bg-blue-100 text-blue-700',
+  alta: 'bg-orange-100 text-orange-700',
+  critica: 'bg-red-100 text-red-700',
+};
+
+const stateColorMap = {
+  creada: 'bg-amber-100 text-amber-700',
+  asignada: 'bg-teal-100 text-teal-700',
+  en_curso: 'bg-blue-100 text-blue-700',
+  resuelta: 'bg-emerald-100 text-emerald-700',
+  rechazada: 'bg-red-100 text-red-700',
+  cerrada: 'bg-slate-200 text-slate-700',
+};
+
 function getOperatorStats(incidentList) {
   return {
     total: incidentList.length,
-    validated: incidentList.filter((incident) => incident.state === 'validada').length,
-    rejected: incidentList.filter((incident) => incident.state === 'rechazada').length,
     pending: incidentList.filter((incident) => incident.state === 'creada').length,
     assigned: incidentList.filter((incident) => incident.state === 'asignada').length,
     inProgress: incidentList.filter((incident) => incident.state === 'en_curso').length,
-    resolved: incidentList.filter((incident) => incident.state === 'resuelta').length
+    resolved: incidentList.filter((incident) => incident.state === 'resuelta').length,
+    closed: incidentList.filter((incident) => incident.state === 'cerrada').length
   };
 }
 
@@ -40,22 +61,6 @@ function getOperatorViewConfig(view) {
       title: 'Todas las incidencias',
       state: null,
       empty: 'No hay incidencias'
-    };
-  }
-
-  if (view === 'validated') {
-    return {
-      title: 'Validadas',
-      state: 'validada',
-      empty: 'No hay incidencias validadas'
-    };
-  }
-
-  if (view === 'rejected') {
-    return {
-      title: 'Rechazadas',
-      state: 'rechazada',
-      empty: 'No hay incidencias rechazadas'
     };
   }
 
@@ -80,6 +85,14 @@ function getOperatorViewConfig(view) {
       title: 'Resueltas',
       state: 'resuelta',
       empty: 'No hay incidencias resueltas'
+    };
+  }
+
+  if (view === 'closed') {
+    return {
+      title: 'Cerradas',
+      state: 'cerrada',
+      empty: 'No hay incidencias cerradas'
     };
   }
 
@@ -128,20 +141,19 @@ function getVisibleIncidents(viewConfig) {
 
 function renderIncidentCard(incident) {
   const isCreada = incident.state === 'creada';
-  const isValidada = incident.state === 'validada';
   const isResolved = incident.state === 'resuelta';
   const isRejected = incident.state === 'rechazada';
   const isClosed = incident.state === 'cerrada';
-  const canAssign = incident.state === 'validada' || incident.state === 'asignada' || incident.state === 'en_curso';
+  const canAssign = incident.state === 'asignada';
   const isFinal = isClosed || isRejected;
 
   return `
-    <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+    <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm cursor-pointer hover:shadow-md transition incident-detail-link" data-incident-id="${incident.id}">
       <div class="flex items-start justify-between gap-4">
-        <div>
+        <div class="flex-grow">
           <h3 class="font-semibold text-slate-900">${incident.title}</h3>
           <p class="text-sm text-slate-600 mt-1">${incident.description}</p>
-          <p class="text-xs text-slate-400 mt-2">#${incident.id} · ${incident.creatorDni} · Estado: ${stateLabelMap[incident.state] || incident.state}</p>
+          <p class="text-xs text-slate-400 mt-2">#${incident.id} · ${incident.creatorDni} · Estado: <span class="px-2 py-1 rounded-full text-xs font-semibold ${stateColorMap[incident.state] || 'bg-slate-100'}">${stateLabelMap[incident.state] || incident.state}</span></p>
           <p class="text-xs text-slate-400 mt-1">Categoria reportada: ${incident.category?.toUpperCase() || '-'}</p>
           <p class="text-xs text-slate-400 mt-1">Equipo actual: ${(incident.assignedTeam || 'sin_asignar').toUpperCase()}</p>
         </div>
@@ -155,23 +167,8 @@ function renderIncidentCard(incident) {
               No concluida
             </button>
           ` : ''}
-          ${isCreada ? `
-            <button class="validate-btn px-3 py-2 rounded-xl text-white text-sm font-semibold" style="background:#0f766e;" data-id="${incident.id}">
-              Validar
-            </button>
-            <button class="reject-btn px-3 py-2 rounded-xl text-white text-sm font-semibold" style="background:#b91c1c;" data-id="${incident.id}">
-              Rechazar
-            </button>
-          ` : ''}
-          ${isValidada ? `
-            <select class="team-select px-3 py-2 rounded-xl border border-slate-300 text-sm" data-id="${incident.id}">
-              ${TEAM_OPTIONS.map((team) => `<option value="${team.value}" ${incident.assignedTeam?.toUpperCase() === team.value ? 'selected' : ''}>${team.label}</option>`).join('')}
-            </select>
-            <button class="assign-btn px-3 py-2 rounded-xl text-white text-sm font-semibold" style="background:#1468f5;" data-id="${incident.id}">
-              Asignar
-            </button>
-          ` : ''}
-          ${canAssign && !isValidada && !isResolved && !isFinal ? `
+          ${isCreada ? `` : ''}
+          ${canAssign && !isResolved && !isFinal ? `
             <select class="team-select px-3 py-2 rounded-xl border border-slate-300 text-sm" data-id="${incident.id}">
               ${TEAM_OPTIONS.map((team) => `<option value="${team.value}" ${incident.assignedTeam?.toUpperCase() === team.value ? 'selected' : ''}>${team.label}</option>`).join('')}
             </select>
@@ -193,11 +190,10 @@ function renderOperatorDashboard() {
 
   const viewButtons = [
     { key: 'pending', label: `Pendientes (${stats.pending})` },
-    { key: 'validated', label: `Validadas (${stats.validated})` },
-    { key: 'rejected', label: `Rechazadas (${stats.rejected})` },
     { key: 'assigned', label: `Asignadas (${stats.assigned})` },
     { key: 'in_progress', label: `En curso (${stats.inProgress})` },
     { key: 'resolved', label: `Resueltas (${stats.resolved})` },
+    { key: 'closed', label: `Cerradas (${stats.closed})` },
     { key: 'all', label: `Todas (${stats.total})` }
   ];
 
@@ -224,7 +220,6 @@ function renderOperatorDashboard() {
       <main class="px-5 py-6">
         <div class="flex items-center justify-between mb-6">
           <h1 class="text-3xl font-bold text-slate-900">Revision y asignacion</h1>
-          <span class="text-sm text-slate-500">Pendientes de gestion: ${visibleIncidents.length}</span>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -233,16 +228,16 @@ function renderOperatorDashboard() {
             <p class="text-2xl font-bold text-slate-900 mt-1">${stats.total}</p>
           </div>
           <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
-            <p class="text-xs uppercase tracking-wide text-slate-400 font-semibold">Validadas</p>
-            <p class="text-2xl font-bold text-emerald-600 mt-1">${stats.validated}</p>
-          </div>
-          <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
-            <p class="text-xs uppercase tracking-wide text-slate-400 font-semibold">Rechazadas</p>
-            <p class="text-2xl font-bold text-rose-600 mt-1">${stats.rejected}</p>
-          </div>
-          <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
             <p class="text-xs uppercase tracking-wide text-slate-400 font-semibold">Pendientes</p>
             <p class="text-2xl font-bold text-amber-600 mt-1">${stats.pending}</p>
+          </div>
+          <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+            <p class="text-xs uppercase tracking-wide text-slate-400 font-semibold">Asignadas</p>
+            <p class="text-2xl font-bold text-teal-600 mt-1">${stats.assigned}</p>
+          </div>
+          <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+            <p class="text-xs uppercase tracking-wide text-slate-400 font-semibold">Resueltas</p>
+            <p class="text-2xl font-bold text-emerald-600 mt-1">${stats.resolved}</p>
           </div>
         </div>
 
@@ -306,7 +301,30 @@ async function updateOperatorIncidentState(incidentId, state, fallbackMessage) {
 }
 
 async function validateIncident(incidentId) {
-  await updateOperatorIncidentState(incidentId, 'VALIDADA', 'No se pudo validar la incidencia');
+  alert('La accion de validar fue eliminada. Abra la incidencia en detalle para asignar prioridad y equipo.');
+}
+
+async function operatorValidateAndAssign(incidentId, priority, team) {
+  if (!priority || !team) {
+    alert('Debes seleccionar prioridad y equipo');
+    return;
+  }
+
+  const response = await fetch(`/api/incidents/${encodeURIComponent(incidentId)}/operator-validate`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify({ priority, team })
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    alert(message || 'No se pudo validar y asignar la incidencia');
+    return;
+  }
+
+  await loadIncidents();
+  renderOperatorDashboard();
 }
 
 async function rejectIncident(incidentId) {
@@ -342,6 +360,17 @@ function attachEvents() {
     button.addEventListener('click', () => {
       currentOperatorView = button.dataset.view || 'pending';
       renderOperatorDashboard();
+    });
+  });
+
+  document.querySelectorAll('.incident-detail-link').forEach((card) => {
+    card.addEventListener('click', (e) => {
+      // Don't navigate if clicking buttons
+      if (e.target.closest('button') || e.target.closest('select')) {
+        return;
+      }
+      const incidentId = card.dataset.incidentId;
+      window.location.href = `/incident-detail?id=${incidentId}`;
     });
   });
 

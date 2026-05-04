@@ -10,11 +10,26 @@ const roleMap = {
 
 const stateLabelMap = {
   creada: "Creada",
-  validada: "Validada",
   asignada: "Asignada",
   en_curso: "En curso",
   resuelta: "Resuelta",
   cerrada: "Cerrada",
+};
+
+const priorityColorMap = {
+  baja: "bg-slate-100 text-slate-700",
+  media: "bg-blue-100 text-blue-700",
+  alta: "bg-orange-100 text-orange-700",
+  critica: "bg-red-100 text-red-700",
+};
+
+const stateColorMap = {
+  creada: "bg-amber-100 text-amber-700",
+  asignada: "bg-teal-100 text-teal-700",
+  en_curso: "bg-blue-100 text-blue-700",
+  resuelta: "bg-emerald-100 text-emerald-700",
+  rechazada: "bg-red-100 text-red-700",
+  cerrada: "bg-slate-200 text-slate-700",
 };
 
 async function loadSessionUser() {
@@ -154,18 +169,42 @@ function renderDashboard() {
               <p class="text-lg font-medium">No has reportado incidencias</p>
               <p class="text-sm mt-1">Pulsa el boton Nueva para crear una</p>
             </div>`
-            : `<div class="space-y-4">
+            : `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               ${myIncidents
                 .map(
                   (incident) => `
-                <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-                  <div class="flex items-center justify-between">
-                    <h2 class="text-lg font-semibold text-slate-900">${incident.title}</h2>
-                    <span class="text-xs font-semibold px-2 py-1 rounded-full bg-slate-100 text-slate-600">${stateLabelMap[incident.state] || incident.state}</span>
-                  </div>
-                  <p class="text-sm text-slate-600 mt-2">${incident.description}</p>
-                  <div class="text-xs text-slate-400 mt-3">
-                    ${incident.category.toUpperCase()} · ${incident.priority.toUpperCase()} · ${incident.ubicacion.municipio}, ${incident.ubicacion.calle} ${incident.ubicacion.numero}
+                <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition cursor-pointer incident-card" data-incident-id="${incident.id}">
+                  ${incident.previewImageBase64 ? `
+                    <div class="rounded-lg overflow-hidden mb-3 h-40 bg-slate-100">
+                      <img src="data:image/jpeg;base64,${incident.previewImageBase64}" alt="Preview" class="w-full h-full object-cover" />
+                    </div>
+                  ` : `<div class="rounded-lg overflow-hidden mb-3 h-40 bg-slate-100 flex items-center justify-center">
+                    <i data-lucide="image-off" style="width:32px;height:32px;color:#cbd5e1;"></i>
+                  </div>`}
+                  
+                  <div class="space-y-2">
+                    <div class="flex items-start justify-between gap-2">
+                      <h2 class="text-sm font-semibold text-slate-900 line-clamp-2">${incident.title}</h2>
+                      <span class="px-2 py-1 rounded-full text-xs font-semibold whitespace-nowrap flex-shrink-0 ${stateColorMap[incident.state] || 'bg-slate-100'}">
+                        ${stateLabelMap[incident.state] || incident.state}
+                      </span>
+                    </div>
+                    
+                    <p class="text-xs text-slate-600 line-clamp-2">${incident.description}</p>
+                    
+                    <div class="flex items-center gap-2 flex-wrap pt-2">
+                      <span class="px-2 py-1 rounded-full text-xs font-semibold ${priorityColorMap[incident.priority] || 'bg-slate-100'}">
+                        ${incident.priority?.toUpperCase() || 'N/A'}
+                      </span>
+                      <span class="text-xs text-slate-500">${incident.category?.toUpperCase() || 'N/A'}</span>
+                    </div>
+                    
+                    <div class="text-xs text-slate-400 border-t border-slate-100 pt-2 mt-2">
+                      <div class="flex items-center gap-1">
+                        <i data-lucide="map-pin" style="width:12px;height:12px;"></i>
+                        <span>${incident.ubicacionMunicipio}, ${incident.ubicacionCalle} ${incident.ubicacionNumero}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               `,
@@ -191,7 +230,7 @@ function attachDashboardEvents() {
     logoutBtn.addEventListener("click", async () => {
       await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
       localStorage.removeItem("currentUser");
-      localStorage.removeItem("activeRole"); // Importante limpiar esto al salir
+      localStorage.removeItem("activeRole");
       window.location.href = "/login";
     });
   }
@@ -223,6 +262,14 @@ function attachDashboardEvents() {
       () => (window.location.href = "/new-incident"),
     );
   }
+
+  // Agregar event listeners a las tarjetas de incidencias
+  document.querySelectorAll(".incident-card").forEach((card) => {
+    card.addEventListener("click", () => {
+      const incidentId = card.dataset.incidentId;
+      window.location.href = `/incident-detail?id=${incidentId}`;
+    });
+  });
 }
 
 document.addEventListener("DOMContentLoaded", async () => {

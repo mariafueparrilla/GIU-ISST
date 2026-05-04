@@ -2,7 +2,9 @@ package com.gui.gui.incident;
 
 import com.gui.gui.incident.dto.IncidentCreateRequest;
 import com.gui.gui.incident.dto.IncidentAssignmentRequest;
+import com.gui.gui.incident.dto.IncidentOperatorValidationRequest;
 import com.gui.gui.incident.dto.IncidentResponse;
+import com.gui.gui.incident.dto.IncidentPreviewResponse;
 import com.gui.gui.incident.dto.IncidentStateUpdateRequest;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -45,35 +47,43 @@ public class IncidentController {
     }
 
     /**
-     * Lista incidencias del propio usuario (vista dashboard usuario).
+     * Obtiene una incidencia por ID con todos sus detalles (para vista de detalle).
+     */
+    @GetMapping("/{id}")
+    public IncidentResponse getIncident(@PathVariable Long id) {
+        return incidentService.getIncidentById(id);
+    }
+
+    /**
+     * Lista incidencias del propio usuario como previews (vista dashboard usuario).
      */
     @GetMapping("/my")
-    public List<IncidentResponse> myIncidents(Authentication authentication) {
-        return incidentService.getIncidentsForUser(authentication.getName());
+    public List<IncidentPreviewResponse> myIncidents(Authentication authentication) {
+        return incidentService.getMyIncidentsPreview(authentication.getName());
     }
 
     /**
-     * Lista incidencias del equipo del tecnico autenticado.
+     * Lista incidencias del equipo del tecnico autenticado como previews.
      */
     @GetMapping("/team/my")
-    public List<IncidentResponse> myTeamIncidents(Authentication authentication) {
-        return incidentService.getIncidentsForTechnicianTeam(authentication.getName());
+    public List<IncidentPreviewResponse> myTeamIncidents(Authentication authentication) {
+        return incidentService.getTeamIncidentsPreview(authentication.getName());
     }
 
     /**
-     * Lista todas las incidencias (uso administrativo).
+     * Lista todas las incidencias como previews (uso administrativo).
      */
     @GetMapping
-    public List<IncidentResponse> allIncidents() {
-        return incidentService.getAllIncidents();
+    public List<IncidentPreviewResponse> allIncidents() {
+        return incidentService.getAllIncidentsPreview();
     }
 
     /**
      * Cambia estado de una incidencia y deja trazadas fechas de hito.
      */
     @PatchMapping("/{id}/state")
-    public IncidentResponse updateState(@PathVariable Long id, @RequestBody IncidentStateUpdateRequest request) {
-        return incidentService.updateState(id, request.state());
+    public IncidentResponse updateState(@PathVariable Long id, @RequestBody IncidentStateUpdateRequest request, Authentication authentication) {
+        return incidentService.updateState(id, request.state(), authentication.getName());
     }
 
     /**
@@ -85,10 +95,25 @@ public class IncidentController {
     }
 
     /**
+     * Operario valida incidencia CREADA, asigna prioridad y equipo tecnico, transiciona a ASIGNADA.
+     * Unifica los pasos anteriores de validacion + asignacion en una sola accion.
+     */
+    @PatchMapping("/{id}/operator-validate")
+    public IncidentResponse operatorValidate(@PathVariable Long id, @RequestBody IncidentOperatorValidationRequest request, Authentication authentication) {
+        return incidentService.operatorValidateAndAssign(authentication.getName(), id, request);
+    }
+
+    // seed-test endpoint removed per request
+
+    /**
      * Cambia estado de incidencia por parte de un tecnico sobre su equipo.
      */
     @PatchMapping("/{id}/team-state")
     public IncidentResponse updateTeamState(@PathVariable Long id, @RequestBody String rawBody, Authentication authentication) {
+        if (authentication == null) {
+            throw new org.springframework.web.server.ResponseStatusException(HttpStatus.UNAUTHORIZED, "Autenticacion requerida");
+        }
+
         String stateValue = null;
         try {
             // try parse as JSON object { "state": "..." }

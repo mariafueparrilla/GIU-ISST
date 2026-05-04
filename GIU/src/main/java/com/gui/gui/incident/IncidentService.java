@@ -2,9 +2,12 @@ package com.gui.gui.incident;
 
 import com.gui.gui.incident.dto.IncidentCreateRequest;
 import com.gui.gui.incident.dto.IncidentAssignmentRequest;
+import com.gui.gui.incident.dto.IncidentOperatorValidationRequest;
 import com.gui.gui.incident.dto.IncidentLocationRequest;
 import com.gui.gui.incident.dto.IncidentLocationResponse;
 import com.gui.gui.incident.dto.IncidentResponse;
+import com.gui.gui.incident.dto.IncidentImageResponse;
+import com.gui.gui.incident.dto.IncidentPreviewResponse;
 import com.gui.gui.user.UserEntity;
 import com.gui.gui.user.UserRepository;
 import com.gui.gui.user.UserRole;
@@ -40,9 +43,13 @@ public class IncidentService {
     /** Repositorio de usuarios para resolver el creador de la incidencia. */
     private final UserRepository userRepository;
 
-    public IncidentService(IncidentRepository incidentRepository, UserRepository userRepository) {
+    /** Repositorio de imagenes de incidencias. */
+    private final IncidentImageRepository imageRepository;
+
+    public IncidentService(IncidentRepository incidentRepository, UserRepository userRepository, IncidentImageRepository imageRepository) {
         this.incidentRepository = incidentRepository;
         this.userRepository = userRepository;
+        this.imageRepository = imageRepository;
     }
 
     /**
@@ -66,14 +73,35 @@ public class IncidentService {
         incident.setDescription(request.description().trim());
         incident.setCategory(parseCategory(request.category()));
         incident.setAssignedTeam(null);
-        incident.setPriority(parsePriority(request.priority()));
+        incident.setPriority(null);  // Operario asignara prioridad en validacion
         incident.setState(IncidentState.CREADA);
         incident.setCreationDate(LocalDate.now());
+        incident.setCreationInstant(Instant.now());
         incident.setCreator(creator);
         incident.setUbicacion(ubicacion);
 
-        // Persistir y mapear a DTO de salida.
-        return toResponse(requireNonNull(incidentRepository.save(incident)));
+        // Persistir incidencia primero.
+        IncidentEntity savedIncident = requireNonNull(incidentRepository.save(incident));
+
+        // Procesar y persistir imagenes si existen (maximo 3).
+        if (request.images() != null && !request.images().isEmpty()) {
+            List<IncidentImageEntity> images = request.images().stream()
+                .limit(3)  // Limitar a maximo 3 imagenes
+                .map(imageRequest -> {
+                    IncidentImageEntity imageEntity = new IncidentImageEntity();
+                    imageEntity.setIncident(savedIncident);
+                    imageEntity.setFilename(imageRequest.filename());
+                    imageEntity.setMimeType(imageRequest.mimeType());
+                    imageEntity.setImageData(imageRequest.imageData());
+                    imageEntity.setFileSize(imageRequest.fileSize());
+                    return imageEntity;
+                })
+                .toList();
+            imageRepository.saveAll(images);
+            savedIncident.setImages(images);
+        }
+
+        return toResponse(savedIncident);
     }
 
     /**
@@ -103,7 +131,7 @@ public class IncidentService {
      * Actualiza estado de incidencia y registra fechas de hito cuando aplica.
      */
     @Transactional
-    public IncidentResponse updateState(Long incidentId, String stateValue) {
+    public IncidentResponse updateState(Long incidentId, String stateValue, String operatorDni) {
         if (incidentId == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "id de incidencia obligatorio");
         }
@@ -115,23 +143,22 @@ public class IncidentService {
         IncidentEntity incident = incidentRepository.findById(incidentId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incidencia no encontrada"));
 
+        UserEntity operator = userRepository.findById(normalizeDni(operatorDni))
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no valido"));
+
         IncidentState newState = parseState(stateValue);
         
-        // El operario solo puede setear estos estados
-        if (newState != IncidentState.VALIDADA && newState != IncidentState.RECHAZADA && newState != IncidentState.CERRADA && newState != IncidentState.ASIGNADA) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El operario solo puede validar, rechazar, cerrar o devolver a equipo");
+        // El operario solo puede setear estos estados (rechazar, cerrar o devolver a equipo)
+        if (newState != IncidentState.RECHAZADA && newState != IncidentState.CERRADA && newState != IncidentState.ASIGNADA) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El operario solo puede rechazar, cerrar o devolver a equipo");
         }
 
         if (incident.getState() == IncidentState.CERRADA || incident.getState() == IncidentState.RECHAZADA) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La incidencia ya esta cerrada o rechazada");
         }
 
-        if (newState == IncidentState.VALIDADA && incident.getState() != IncidentState.CREADA) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Solo se pueden validar incidencias en estado CREADA");
-        }
-
-        if (newState == IncidentState.RECHAZADA && incident.getState() != IncidentState.CREADA && incident.getState() != IncidentState.VALIDADA) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Solo se pueden rechazar incidencias CREADA o VALIDADA");
+        if (newState == IncidentState.RECHAZADA && incident.getState() != IncidentState.CREADA) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Solo se pueden rechazar incidencias CREADA");
         }
 
         if (newState == IncidentState.CERRADA && incident.getState() != IncidentState.RESUELTA) {
@@ -142,7 +169,7 @@ public class IncidentService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Solo se puede devolver a ASIGNADA una incidencia RESUELTA");
         }
 
-        applyStateAndMilestoneDates(incident, newState);
+        applyStateAndMilestoneDates(incident, newState, operator);
 
         return toResponse(requireNonNull(incidentRepository.save(incident)));
     }
@@ -183,7 +210,7 @@ public class IncidentService {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incidencia no encontrada"));
 
         if (incident.getState() == IncidentState.CREADA) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La incidencia debe estar validada antes de asignarse a un equipo");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La incidencia debe ser revisada por el operario antes de asignarse");
         }
         if (incident.getState() == IncidentState.RESUELTA || incident.getState() == IncidentState.CERRADA) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No se puede asignar una incidencia resuelta o cerrada");
@@ -191,7 +218,7 @@ public class IncidentService {
 
         IncidentCategory assignedTeam = parseCategory(request.team());
         incident.setAssignedTeam(assignedTeam);
-        applyStateAndMilestoneDates(incident, IncidentState.ASIGNADA);
+        applyStateAndMilestoneDates(incident, IncidentState.ASIGNADA, operator);
 
         return toResponse(requireNonNull(incidentRepository.save(incident)));
     }
@@ -221,7 +248,100 @@ public class IncidentService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El tecnico solo puede usar estados ASIGNADA, EN_CURSO o RESUELTA");
         }
 
-        applyStateAndMilestoneDates(incident, newState);
+        applyStateAndMilestoneDates(incident, newState, technician);
+        return toResponse(requireNonNull(incidentRepository.save(incident)));
+    }
+
+    /**
+     * Devuelve una incidencia por ID con todos sus detalles (para vista de detalle).
+     */
+    @Transactional(readOnly = true)
+    public IncidentResponse getIncidentById(Long incidentId) {
+        if (incidentId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "id de incidencia obligatorio");
+        }
+
+        IncidentEntity incident = incidentRepository.findById(incidentId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incidencia no encontrada"));
+
+        return toResponse(incident);
+    }
+
+    /**
+     * Devuelve incidencias del usuario autenticado como previews para el dashboard.
+     */
+    @Transactional(readOnly = true)
+    public List<IncidentPreviewResponse> getMyIncidentsPreview(String dni) {
+        return incidentRepository.findByCreator_DniOrderByCreationDateDescIdDesc(normalizeDni(dni))
+            .stream()
+            .map(this::toPreviewResponse)
+            .toList();
+    }
+
+    /**
+     * Devuelve todas las incidencias como previews para vista administrativa.
+     */
+    @Transactional(readOnly = true)
+    public List<IncidentPreviewResponse> getAllIncidentsPreview() {
+        return incidentRepository.findAll()
+            .stream()
+            .sorted(Comparator.comparing(IncidentEntity::getId).reversed())
+            .map(this::toPreviewResponse)
+            .toList();
+    }
+
+    /**
+     * Devuelve incidencias del equipo tecnico como previews.
+     */
+    @Transactional(readOnly = true)
+    public List<IncidentPreviewResponse> getTeamIncidentsPreview(String technicianDni) {
+        UserEntity technician = resolveTechnician(technicianDni);
+
+        return incidentRepository.findByAssignedTeamOrderByCreationDateDescIdDesc(technician.getTechnicalTeam())
+            .stream()
+            .map(this::toPreviewResponse)
+            .toList();
+    }
+
+    /**
+     * Operario valida una incidencia CREADA, asigna prioridad y equipo tecnico,
+     * y transiciona a ASIGNADA en una sola accion (unificada).
+     * Esto reemplaza los pasos anteriores de validacion + asignacion.
+     */
+    @Transactional
+    public IncidentResponse operatorValidateAndAssign(String operatorDni, Long incidentId, IncidentOperatorValidationRequest request) {
+        if (incidentId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "id de incidencia obligatorio");
+        }
+        if (request == null || isBlank(request.priority()) || isBlank(request.team())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "priority y team son obligatorios");
+        }
+
+        UserEntity operator = userRepository.findById(requireNonNull(normalizeDni(operatorDni)))
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no valido"));
+
+        if (operator.getRole() != UserRole.OPERATOR) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Acceso exclusivo para operarios");
+        }
+
+        IncidentEntity incident = incidentRepository.findById(incidentId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incidencia no encontrada"));
+
+        // Solo se puede validar incidencias en estado CREADA
+        if (incident.getState() != IncidentState.CREADA) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Solo se pueden validar incidencias en estado CREADA");
+        }
+
+        // Asignar prioridad (realizado por operario)
+        incident.setPriority(parsePriority(request.priority()));
+
+        // Asignar equipo tecnico
+        IncidentCategory assignedTeam = parseCategory(request.team());
+        incident.setAssignedTeam(assignedTeam);
+
+        // Transicionar a ASIGNADA (unificando validacion + asignacion)
+        applyStateAndMilestoneDates(incident, IncidentState.ASIGNADA, operator);
+
         return toResponse(requireNonNull(incidentRepository.save(incident)));
     }
 
@@ -236,11 +356,13 @@ public class IncidentService {
         ubicacion.setCodigoPostal(request.codigoPostal());
         ubicacion.setLatitud(request.latitud());
         ubicacion.setLongitud(request.longitud());
+        ubicacion.setFormattedAddress(request.formattedAddress());
+        ubicacion.setPlaceId(request.placeId());
         return ubicacion;
     }
 
     /**
-     * Mapea entidad de incidencia a DTO de salida para frontend.
+     * Mapea entidad de incidencia a DTO de salida completo para vista de detalle.
      */
     private IncidentResponse toResponse(IncidentEntity incident) {
         UbicacionEntity ubicacion = incident.getUbicacion();
@@ -251,25 +373,70 @@ public class IncidentService {
             ubicacion.getNumero(),
             ubicacion.getCodigoPostal(),
             ubicacion.getLatitud(),
-            ubicacion.getLongitud()
+            ubicacion.getLongitud(),
+            ubicacion.getFormattedAddress(),
+            ubicacion.getPlaceId()
         );
+
+        List<IncidentImageResponse> imageResponses = incident.getImages().stream()
+            .map(img -> new IncidentImageResponse(
+                img.getId(),
+                img.getFilename(),
+                img.getMimeType(),
+                img.getImageData()
+            ))
+            .toList();
 
         return new IncidentResponse(
             incident.getId(),
             incident.getTitle(),
             incident.getDescription(),
             incident.getCategory().name().toLowerCase(Locale.ROOT),
-            incident.getPriority().name().toLowerCase(Locale.ROOT),
+            incident.getPriority() == null ? null : incident.getPriority().name().toLowerCase(Locale.ROOT),
             incident.getState().name().toLowerCase(Locale.ROOT),
             incident.getAssignedTeam() == null ? null : incident.getAssignedTeam().name().toLowerCase(Locale.ROOT),
-            incident.getCreationDate(),
-            incident.getValidationDate(),
+            incident.getCreationInstant(),
             incident.getAsignationDate(),
             incident.getResolutionDate(),
             incident.getRejectionDate(),
             incident.getClosingDate(),
             incident.getCreator().getDni(),
-            ubicacionResponse
+            incident.getCreator().getName(),
+            incident.getAssigner() != null ? incident.getAssigner().getDni() : null,
+            incident.getResolver() != null ? incident.getResolver().getDni() : null,
+            incident.getCloser() != null ? incident.getCloser().getDni() : null,
+            incident.getRejecter() != null ? incident.getRejecter().getDni() : null,
+            ubicacionResponse,
+            imageResponses
+        );
+    }
+
+    /**
+     * Mapea entidad de incidencia a DTO de preview para listados en dashboards.
+     */
+    private IncidentPreviewResponse toPreviewResponse(IncidentEntity incident) {
+        String previewImage = null;
+        if (!incident.getImages().isEmpty()) {
+            previewImage = incident.getImages().get(0).getImageData();
+        }
+
+        UbicacionEntity ubicacion = incident.getUbicacion();
+
+        return new IncidentPreviewResponse(
+            incident.getId(),
+            incident.getTitle(),
+            incident.getDescription(),
+            incident.getCategory().name().toLowerCase(Locale.ROOT),
+            incident.getPriority() == null ? null : incident.getPriority().name().toLowerCase(Locale.ROOT),
+            incident.getState().name().toLowerCase(Locale.ROOT),
+            incident.getAssignedTeam() == null ? null : incident.getAssignedTeam().name().toLowerCase(Locale.ROOT),
+            incident.getCreationDate(),
+            incident.getCreator().getDni(),
+            incident.getCreator().getName(),
+            ubicacion.getMunicipio(),
+            ubicacion.getCalle(),
+            ubicacion.getNumero(),
+            previewImage
         );
     }
 
@@ -277,8 +444,8 @@ public class IncidentService {
      * Valida campos obligatorios y formato basico para crear incidencia.
      */
     private void validateCreateRequest(IncidentCreateRequest request) {
-        if (request == null || isBlank(request.title()) || isBlank(request.description()) || isBlank(request.category()) || isBlank(request.priority()) || request.ubicacion() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "title, description, category, priority y ubicacion son obligatorios");
+        if (request == null || isBlank(request.title()) || isBlank(request.description()) || isBlank(request.category()) || request.ubicacion() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "title, description, category y ubicacion son obligatorios");
         }
 
         IncidentLocationRequest ubicacion = request.ubicacion();
@@ -286,9 +453,13 @@ public class IncidentService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Todos los campos de ubicacion son obligatorios");
         }
 
+        // Validar numero maximo de imagenes (maximo 3).
+        if (request.images() != null && request.images().size() > 3) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Se pueden subir maximo 3 imagenes");
+        }
+
         // Verificacion temprana de enums de negocio.
         parseCategory(request.category());
-        parsePriority(request.priority());
     }
 
     /** Convierte texto de categoria a enum. */
@@ -332,27 +503,28 @@ public class IncidentService {
         return value == null || value.trim().isEmpty();
     }
 
-    /** Aplica el nuevo estado y registra fechas de hito cuando corresponda. */
-    private void applyStateAndMilestoneDates(IncidentEntity incident, IncidentState newState) {
+    /** Aplica el nuevo estado, registra fechas de hito y guarda quien realizo la accion. */
+    private void applyStateAndMilestoneDates(IncidentEntity incident, IncidentState newState, UserEntity user) {
         incident.setState(newState);
 
         Instant now = Instant.now();
 
         // Solo se fija la fecha la primera vez que se alcanza cada estado.
-        if (newState == IncidentState.VALIDADA && incident.getValidationDate() == null) {
-            incident.setValidationDate(now);
-        }
         if (newState == IncidentState.ASIGNADA && incident.getAsignationDate() == null) {
             incident.setAsignationDate(now);
+            incident.setAssigner(user);
         }
         if (newState == IncidentState.RESUELTA && incident.getResolutionDate() == null) {
             incident.setResolutionDate(now);
+            incident.setResolver(user);
         }
         if (newState == IncidentState.RECHAZADA && incident.getRejectionDate() == null) {
             incident.setRejectionDate(now);
+            incident.setRejecter(user);
         }
         if (newState == IncidentState.CERRADA && incident.getClosingDate() == null) {
             incident.setClosingDate(now);
+            incident.setCloser(user);
         }
     }
 
@@ -376,4 +548,5 @@ public class IncidentService {
     private <T> T requireNonNull(@NonNull T value) {
         return Objects.requireNonNull(value);
     }
+    // clearAndSeedPendingIncidents removed per request
 }
