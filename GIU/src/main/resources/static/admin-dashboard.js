@@ -305,38 +305,45 @@ function renderIncidenciasSection() {
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       ${filteredIncidents.map((incident) => `
-        <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition cursor-pointer incident-card" data-incident-id="${incident.id}">
-          ${incident.previewImageBase64 ? `
-            <div class="rounded-lg overflow-hidden mb-3 h-40 bg-slate-100">
-              <img src="data:image/jpeg;base64,${incident.previewImageBase64}" alt="Preview" class="w-full h-full object-cover" />
-            </div>
-          ` : `<div class="rounded-lg overflow-hidden mb-3 h-40 bg-slate-100 flex items-center justify-center">
-            <i data-lucide="image-off" style="width:32px;height:32px;color:#cbd5e1;"></i>
-          </div>`}
-
-          <div class="space-y-2">
-            <div class="flex items-start justify-between gap-2">
-              <h3 class="text-sm font-semibold text-slate-900 line-clamp-2">${incident.title}</h3>
-              <span class="px-2 py-1 rounded-full text-xs font-semibold whitespace-nowrap flex-shrink-0 ${stateColorMap[incident.state] || 'bg-slate-100'}">
+        <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition cursor-pointer incident-card" data-incident-id="${incident.id}">
+          <div class="h-48 bg-gradient-to-br from-slate-200 to-slate-300 relative">
+            ${incident.previewImageBase64 ? `
+              <img src="data:image/jpeg;base64,${incident.previewImageBase64}" alt="Foto de la incidencia" class="w-full h-full object-cover" />
+            ` : `
+              <div class="w-full h-full flex items-center justify-center">
+                <div class="text-center text-slate-400">
+                  <i data-lucide="camera" style="width:48px;height:48px;margin:0 auto 8px;"></i>
+                  <p class="text-sm font-medium">Sin foto</p>
+                </div>
+              </div>
+            `}
+            <div class="absolute top-3 right-3">
+              <span class="px-2 py-1 rounded-full text-xs font-semibold bg-white/90 backdrop-blur-sm ${stateColorMap[incident.state] || 'bg-slate-100'}">
                 ${stateLabelMap[incident.state] || incident.state}
               </span>
             </div>
+          </div>
 
-            <p class="text-xs text-slate-600 line-clamp-2">${incident.description}</p>
+          <div class="p-4">
+            <div class="space-y-2">
+              <h3 class="text-sm font-semibold text-slate-900 line-clamp-2">${incident.title}</h3>
 
-            <div class="flex items-center gap-2 flex-wrap pt-2">
-              <span class="px-2 py-1 rounded-full text-xs font-semibold ${priorityColorMap[incident.priority] || 'bg-slate-100'}">
-                ${incident.priority?.toUpperCase() || 'N/A'}
-              </span>
-              <span class="text-xs text-slate-500">${incident.category?.toUpperCase() || 'N/A'}</span>
-            </div>
+              <p class="text-xs text-slate-600 line-clamp-2">${incident.description}</p>
 
-            <div class="text-xs text-slate-400 border-t border-slate-100 pt-2 mt-2">
-              <div class="flex items-center gap-1">
-                <i data-lucide="map-pin" style="width:12px;height:12px;"></i>
-                <span>${incident.ubicacionMunicipio}, ${incident.ubicacionCalle} ${incident.ubicacionNumero}</span>
+              <div class="flex items-center gap-2 flex-wrap pt-2">
+                <span class="px-2 py-1 rounded-full text-xs font-semibold ${priorityColorMap[incident.priority] || 'bg-slate-100'}">
+                  ${incident.priority?.toUpperCase() || 'N/A'}
+                </span>
+                <span class="text-xs text-slate-500">${incident.category?.toUpperCase() || 'N/A'}</span>
               </div>
-              <div class="mt-1 text-slate-500">Reportante: ${incident.creatorDni}</div>
+
+              <div class="text-xs text-slate-400 border-t border-slate-100 pt-2 mt-2">
+                <div class="flex items-center gap-1">
+                  <i data-lucide="map-pin" style="width:12px;height:12px;"></i>
+                  <span>${incident.ubicacionMunicipio}, ${incident.ubicacionCalle} ${incident.ubicacionNumero}</span>
+                </div>
+                <div class="mt-1 text-slate-500">Reportante: ${incident.creatorDni}</div>
+              </div>
             </div>
           </div>
         </div>
