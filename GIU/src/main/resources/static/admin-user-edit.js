@@ -11,16 +11,6 @@ const roleMap = {
   technician: 'Tecnico'
 };
 
-const technicalTeams = [
-  { value: 'alumbrado', label: 'Alumbrado' },
-  { value: 'limpieza', label: 'Limpieza' },
-  { value: 'movilidad', label: 'Movilidad' },
-  { value: 'agua', label: 'Agua' },
-  { value: 'residuos', label: 'Residuos' },
-  { value: 'mobiliario', label: 'Mobiliario' },
-  { value: 'otros', label: 'Otros' }
-];
-
 async function loadSessionUser() {
   const response = await fetch('/api/auth/me', { credentials: 'same-origin' });
   if (!response.ok) {
@@ -45,6 +35,9 @@ async function loadTargetUser() {
 
 function renderEditPage() {
   const app = document.getElementById('app');
+
+  const nameParts = (targetUser.name || '').trim().split(/\s+/);
+  const surname = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
 
   app.innerHTML = `
     <div class="min-h-full bg-surface-50">
@@ -78,17 +71,6 @@ function renderEditPage() {
           <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
             <form id="edit-user-form" class="space-y-5">
               <div>
-                <label class="block text-sm font-semibold text-slate-700 mb-2">DNI</label>
-                <input
-                  id="dni"
-                  type="text"
-                  value="${targetUser.dni}"
-                  required
-                  class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-surface-50 text-sm text-slate-700"
-                  placeholder="87654321B"
-                >
-              </div>
-              <div>
                 <label class="block text-sm font-semibold text-slate-700 mb-2">Nombre</label>
                 <input
                   id="name"
@@ -96,6 +78,39 @@ function renderEditPage() {
                   value="${targetUser.name}"
                   required
                   class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-surface-50 text-sm text-slate-700"
+                >
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Apellido</label>
+                <input
+                  id="surname"
+                  type="text"
+                  value="${surname}"
+                  disabled
+                  class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-surface-100 text-sm text-slate-500"
+                >
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">DNI</label>
+                <input
+                  id="dni-display"
+                  type="text"
+                  value="${targetUser.dni || ''}"
+                  disabled
+                  class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-surface-100 text-sm text-slate-500"
+                >
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Rol</label>
+                <input
+                  id="role-display"
+                  type="text"
+                  value="${roleMap[targetUser.role] || targetUser.role}"
+                  disabled
+                  class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-surface-100 text-sm text-slate-500"
                 >
               </div>
 
@@ -108,30 +123,6 @@ function renderEditPage() {
                   required
                   class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-surface-50 text-sm text-slate-700"
                 >
-              </div>
-
-              <div>
-                <label class="block text-sm font-semibold text-slate-700 mb-2">Rol</label>
-                <select
-                  id="role"
-                  class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-surface-50 text-sm text-slate-700"
-                >
-                  <option value="admin" ${targetUser.role === 'admin' ? 'selected' : ''}>Administrador</option>
-                  <option value="user" ${targetUser.role === 'user' ? 'selected' : ''}>Usuario</option>
-                  <option value="operator" ${targetUser.role === 'operator' ? 'selected' : ''}>Operario</option>
-                  <option value="technician" ${targetUser.role === 'technician' ? 'selected' : ''}>Tecnico</option>
-                </select>
-              </div>
-
-              <div id="technical-team-wrapper" class="${targetUser.role === 'technician' ? '' : 'hidden'}">
-                <label class="block text-sm font-semibold text-slate-700 mb-2">Equipo tecnico</label>
-                <select
-                  id="technicalTeam"
-                  class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-surface-50 text-sm text-slate-700"
-                >
-                  <option value="">Selecciona un equipo</option>
-                  ${technicalTeams.map(team => `<option value="${team.value}" ${targetUser.technicalTeam === team.value ? 'selected' : ''}>${team.label}</option>`).join('')}
-                </select>
               </div>
 
               <div class="flex gap-3 pt-2">
@@ -167,21 +158,6 @@ function attachEvents() {
   const cancelBtn = document.getElementById('cancel-btn');
   const logoutBtn = document.getElementById('logout-btn');
   const form = document.getElementById('edit-user-form');
-  const roleSelect = document.getElementById('role');
-  const technicalTeamWrapper = document.getElementById('technical-team-wrapper');
-  const technicalTeamSelect = document.getElementById('technicalTeam');
-
-  const refreshTeamVisibility = () => {
-    const isTechnician = roleSelect.value === 'technician';
-    technicalTeamWrapper.classList.toggle('hidden', !isTechnician);
-    technicalTeamSelect.required = isTechnician;
-    if (!isTechnician) {
-      technicalTeamSelect.value = '';
-    }
-  };
-
-  roleSelect.addEventListener('change', refreshTeamVisibility);
-  refreshTeamVisibility();
 
   const goBack = () => {
     window.location.href = '/admin-dashboard';
@@ -199,24 +175,11 @@ function attachEvents() {
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
 
-    const newDni = document.getElementById('dni').value.trim().toUpperCase();
     const name = document.getElementById('name').value.trim();
     const email = document.getElementById('email').value.trim();
-    const role = document.getElementById('role').value;
-    const technicalTeam = technicalTeamSelect.value;
 
-    if (!newDni || !name || !email) {
-      alert('DNI, nombre y email son obligatorios');
-      return;
-    }
-
-    if (!/^[0-9]{8}[A-Z]$/.test(newDni)) {
-      alert('Formato de DNI invalido. Debe ser 8 digitos y una letra mayuscula.');
-      return;
-    }
-
-    if (role === 'technician' && !technicalTeam) {
-      alert('Selecciona un equipo tecnico para el tecnico');
+    if (!name || !email) {
+      alert('Nombre y email son obligatorios');
       return;
     }
 
@@ -224,11 +187,8 @@ function attachEvents() {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        dni: newDni,
         name,
-        email,
-        role,
-        technicalTeam: role === 'technician' ? technicalTeam : null
+        email
       })
     });
 

@@ -134,12 +134,12 @@ public class UserService {
     }
 
     /**
-     * Actualiza nombre, email y rol de un usuario existente.
+     * Actualiza solo nombre y email de un usuario existente.
      */
     @Transactional
     public UserResponse updateUser(String dni, UserUpdateRequest request, String requesterDni, boolean requesterIsAdmin) {
-        if (isBlank(dni) || request == null || isBlank(request.dni()) || isBlank(request.name()) || isBlank(request.email()) || isBlank(request.role())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "dni, name, email y role son obligatorios");
+        if (isBlank(dni) || request == null || isBlank(request.name()) || isBlank(request.email())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "name y email son obligatorios");
         }
 
         String normalizedDni = dni.trim().toUpperCase(Locale.ROOT);
@@ -151,48 +151,10 @@ public class UserService {
         UserEntity user = userRepository.findById(requireNonNull(normalizedDni))
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
 
-        String normalizedNewDni = request.dni().trim().toUpperCase(Locale.ROOT);
-        if (!normalizedNewDni.matches("^\\d{8}[A-Z]$")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Formato de DNI invalido");
-        }
-
         validateEmail(request.email());
-        UserRole role = parseRole(request.role());
-
-        if (!normalizedNewDni.equals(normalizedDni)) {
-            if (userRepository.existsById(requireNonNull(normalizedNewDni))) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe un usuario con ese DNI");
-            }
-
-            if (!requesterIsAdmin && !normalizedDni.equals(normalizedRequesterDni)) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No autorizado para cambiar el DNI de este usuario");
-            }
-
-            UserEntity newUser = new UserEntity();
-            newUser.setDni(normalizedNewDni);
-            newUser.setName(request.name().trim());
-            newUser.setEmail(request.email().trim().toLowerCase(Locale.ROOT));
-            newUser.setPassword(user.getPassword());
-            newUser.setRole(role);
-            newUser.setTechnicalTeam(resolveTechnicalTeam(role, request.technicalTeam()));
-
-            userRepository.save(newUser);
-            incidentRepository.updateCreatorDni(normalizedDni, normalizedNewDni);
-            incidentRepository.updateAssignerDni(normalizedDni, normalizedNewDni);
-            incidentRepository.updateResolverDni(normalizedDni, normalizedNewDni);
-            incidentRepository.updateCloserDni(normalizedDni, normalizedNewDni);
-            incidentRepository.updateRejecterDni(normalizedDni, normalizedNewDni);
-            incidentRepository.updateOperatorReviewerDni(normalizedDni, normalizedNewDni);
-            incidentReportRepository.updateSenderDni(normalizedDni, normalizedNewDni);
-            userRepository.deleteById(normalizedDni);
-
-            return toResponse(newUser);
-        }
 
         user.setName(request.name().trim());
         user.setEmail(request.email().trim().toLowerCase(Locale.ROOT));
-        user.setRole(role);
-        user.setTechnicalTeam(resolveTechnicalTeam(role, request.technicalTeam()));
 
         return toResponse(userRepository.save(user));
     }
