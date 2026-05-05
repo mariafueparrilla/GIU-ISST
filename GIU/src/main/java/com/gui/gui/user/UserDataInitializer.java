@@ -37,10 +37,10 @@ public class UserDataInitializer {
     @Bean
     public CommandLineRunner seedUsers(UserRepository userRepository, IncidentRepository incidentRepository, PasswordEncoder passwordEncoder) {
         return args -> {
-            // Clean DB and reseed with valid Spanish DNIs for development/testing.
-            // WARNING: This will delete all users and incidents on startup.
-            incidentRepository.deleteAll();
-            userRepository.deleteAll();
+            // Only seed if database is empty
+            if (userRepository.count() > 0) {
+                return; // Database already has data, skip seeding
+            }
 
             // Helper to compute control letter for numeric DNI
             final String DNI_CONTROL_LETTERS = "TRWAGMYFPDXBNJZSQVHLCKE";
