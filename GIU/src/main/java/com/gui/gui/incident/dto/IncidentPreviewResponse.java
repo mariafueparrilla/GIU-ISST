@@ -1,7 +1,6 @@
 package com.gui.gui.incident.dto;
 
 import java.time.Instant;
-import java.time.LocalDate;
 
 /**
  * DTO de vista previa de incidencia para listados en dashboards.
@@ -15,7 +14,7 @@ import java.time.LocalDate;
  * @param priority prioridad.
  * @param state estado actual.
  * @param assignedTeam equipo tecnico asignado.
- * @param creationDate fecha de creacion.
+ * @param creationInstant instante de creacion con timestamp completo.
  * @param creatorDni dni del usuario creador.
  * @param creatorName nombre del usuario creador.
  * @param ubicacionMunicipio municipio de la ubicacion.
@@ -31,9 +30,11 @@ public record IncidentPreviewResponse(
     String priority,
     String state,
     String assignedTeam,
-    LocalDate creationDate,
+    Instant creationInstant,
     Instant resolutionDate,
     Instant operatorReviewDate,
+    Instant closingDate,
+    String closerDni,
     String creatorDni,
     String creatorName,
     String ubicacionMunicipio,

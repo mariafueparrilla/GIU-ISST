@@ -119,27 +119,35 @@ function toggleUserRoleFilter(value) {
 }
 
 function getIncidentKpis(incidentList) {
-  const solved = incidentList.filter((incident) => incident.state === 'resuelta' && incident.resolutionDate && incident.creationDate);
-  const totalResolved = solved.length;
-  const averageSolveDays = totalResolved > 0
-    ? solved.reduce((sum, incident) => {
-        const creation = new Date(incident.creationDate);
-        const resolution = new Date(incident.resolutionDate);
-        return sum + Math.max(0, resolution - creation) / (1000 * 60 * 60 * 24);
-      }, 0) / totalResolved
+  // Average days until resolution (for closed incidents)
+  const closed = incidentList.filter((incident) => incident.state && incident.state.toLowerCase() === 'cerrada' && incident.closingDate && incident.creationInstant);
+  const totalClosed = closed.length;
+  
+  const averageSolveDays = totalClosed > 0
+    ? closed.reduce((sum, incident) => {
+        const creation = new Date(incident.creationInstant);
+        const closing = new Date(incident.closingDate);
+        const days = Math.max(0, closing - creation) / (1000 * 60 * 60 * 24);
+        return sum + days;
+      }, 0) / totalClosed
     : 0;
 
-  const rejected = incidentList.filter((incident) => incident.state === 'rechazada' && incident.operatorReviewDate);
+  // Average closed incidents per operator
   const operatorCount = users.filter((user) => user.role === 'operator').length;
+  const averageClosedPerOperator = operatorCount > 0 ? totalClosed / operatorCount : 0;
+
+  // Rejected incidents stats (kept for backward compatibility)
+  const rejected = incidentList.filter((incident) => incident.state && incident.state.toLowerCase() === 'rechazada' && incident.operatorReviewDate);
   const averageRejectedPerOperator = operatorCount > 0 ? rejected.length / operatorCount : 0;
 
   return {
     total: incidentList.length,
-    totalResolved,
+    totalClosed,
     averageSolveDays,
     operatorCount,
     rejectedCount: rejected.length,
-    averageRejectedPerOperator
+    averageRejectedPerOperator,
+    averageClosedPerOperator
   };
 }
 
@@ -543,8 +551,8 @@ function renderAdminDashboard() {
             <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
               <div class="bg-white rounded-2xl border border-slate-200 p-4 text-center"><p class="text-3xl font-bold text-slate-900">${incidentStats.total}</p><span class="inline-block mt-2 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-500">Total incidencias</span></div>
               <div class="bg-white rounded-2xl border border-slate-200 p-4 text-center"><p class="text-3xl font-bold text-slate-900">${formatDays(incidentKpis.averageSolveDays)}</p><span class="inline-block mt-2 px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">Tiempo medio de resolución</span></div>
-              <div class="bg-white rounded-2xl border border-slate-200 p-4 text-center"><p class="text-3xl font-bold text-slate-900">${incidentKpis.rejectedCount}</p><span class="inline-block mt-2 px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">Incidencias inválidas</span></div>
-              <div class="bg-white rounded-2xl border border-slate-200 p-4 text-center"><p class="text-3xl font-bold text-slate-900">${incidentKpis.operatorCount > 0 ? incidentKpis.averageRejectedPerOperator.toFixed(1) : '0.0'}</p><span class="inline-block mt-2 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-500">Media por operador</span></div>
+              <div class="bg-white rounded-2xl border border-slate-200 p-4 text-center"><p class="text-3xl font-bold text-slate-900">${incidentKpis.operatorCount > 0 ? incidentKpis.averageClosedPerOperator.toFixed(1) : '0.0'}</p><span class="inline-block mt-2 px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">Media incidencias cerradas por operario</span></div>
+              <div class="bg-white rounded-2xl border border-slate-200 p-4 text-center"><p class="text-3xl font-bold text-slate-900">${incidentKpis.rejectedCount}</p><span class="inline-block mt-2 px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">Incidencias rechazadas</span></div>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-4 mb-6">
