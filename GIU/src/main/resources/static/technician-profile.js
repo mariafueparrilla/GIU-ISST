@@ -329,7 +329,7 @@ function normalizeTeamLabel(teamValue) {
 function renderTechnicianProfileData() {
   const incidents = getTeamIncidents();
 
-  const activeIncidents = incidents.filter((incident) => incident.uiStatus !== "resolved").length;
+  const activeIncidents = incidents.filter((incident) => incident.uiStatus !== "resolved" && incident.uiStatus !== "pending").length;
   const pendingIncidents = incidents.filter((incident) => incident.uiStatus === "pending").length;
 
   const today = new Date().toLocaleDateString("es-ES");

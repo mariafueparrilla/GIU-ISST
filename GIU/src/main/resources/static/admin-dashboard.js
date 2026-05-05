@@ -256,12 +256,12 @@ function renderAdminDashboard() {
         </button>
       </nav>
 
-      <main class="px-3 py-6">
-        <section id="incidencias" class="tab-content">
+      <main class="px-3">
+        <section id="incidencias" class="tab-content py-6">
           ${renderIncidenciasSection()}
         </section>
 
-        <section id="usuarios" class="tab-content hidden">
+        <section id="usuarios" class="tab-content hidden py-6">
           <div class="flex items-center justify-between mb-6">
             <h1 class="text-3xl font-bold text-slate-900">
               Usuarios <span class="text-slate-400 text-xl">(${users.length})</span>
@@ -298,14 +298,17 @@ function renderAdminDashboard() {
           </div>
         </section>
 
-        <section id="equipos" class="tab-content hidden">
+        <section id="equipos" class="tab-content hidden pt-6">
           <div class="flex items-center justify-between mb-6">
             <h1 class="text-3xl font-bold text-slate-900">Equipos tecnicos</h1>
           </div>
 
-          <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 pb-6">
+          <div class="flex flex-nowrap items-start gap-4 overflow-x-auto pb-20">
             ${teamStats.map((team) => `
-              <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+              <div
+                class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex-shrink-0 self-start"
+                style="width: clamp(14rem, calc(12rem + ${Math.max(team.technicians.length, 1)} * 0.9rem), 24rem);"
+              >
                 <div class="flex items-center justify-between mb-3">
                   <h3 class="font-semibold text-slate-900">${team.teamName}</h3>
                   <span class="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-600" data-team-count="${team.teamKey}">${team.technicians.length}</span>
@@ -313,7 +316,12 @@ function renderAdminDashboard() {
 
                 <p class="text-xs text-slate-500 mb-3">Incidencias: ${team.assignedCount} (${team.activeCount} activas)</p>
 
-                <div id="team-${team.teamKey}" class="kanban-column tech-column space-y-3 min-h-[400px] bg-slate-50 rounded-xl p-2" data-team="${team.teamKey}">
+                <div
+                  id="team-${team.teamKey}"
+                  class="kanban-column tech-column space-y-3 bg-slate-50 rounded-xl p-2"
+                  data-team="${team.teamKey}"
+                  style="height: clamp(11rem, calc(7.5rem + ${Math.max(team.technicians.length, 1)} * 4.75rem), 42rem);"
+                >
                   ${team.technicians.length === 0 ? `
                     <div class="text-center text-xs text-slate-400 py-4">Sin tecnicos</div>
                   ` : `
@@ -335,7 +343,7 @@ function renderAdminDashboard() {
           </div>
         </section>
 
-        <section id="estadisticas" class="tab-content hidden">
+        <section id="estadisticas" class="tab-content hidden py-6">
           <div class="max-w-5xl mx-auto">
             <h1 class="text-4xl font-bold text-slate-900 mb-8">Estadisticas</h1>
             <div class="grid grid-cols-6 gap-4 mb-6">
@@ -419,15 +427,17 @@ async function updateTechnicianTeam(dni, newTeam) {
   const technician = users.find(u => u.dni === dni);
   if (!technician) return;
 
+  // Use admin-edit endpoint and AdminUserUpdateRequest payload so technicalTeam is applied
   const updatedData = {
-    dni: technician.dni,
     name: technician.name,
+    surname: technician.surname || null,
     email: technician.email,
-    role: technician.role,
+    newDni: technician.dni,
+    role: 'technician',
     technicalTeam: newTeam
   };
 
-  const response = await fetch(`/api/users/${encodeURIComponent(dni)}`, {
+  const response = await fetch(`/api/users/admin-edit/${encodeURIComponent(dni)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'same-origin',
@@ -486,10 +496,8 @@ function attachTechnicianDragDrop() {
         const technician = users.find(u => u.dni === draggedTechnicianDni);
         if (technician) {
           const targetTeamName = Object.values(teamLabelMap)[Object.keys(teamLabelMap).indexOf(targetTeam)] || targetTeam;
-          const confirmed = confirm(`¿Mover ${technician.name} a equipo ${targetTeamName}?`);
-          if (confirmed) {
-            await updateTechnicianTeam(draggedTechnicianDni, targetTeam);
-          }
+          // Move automatically without interactive confirmation
+          await updateTechnicianTeam(draggedTechnicianDni, targetTeam);
         }
       }
       draggedTechnicianDni = null;
