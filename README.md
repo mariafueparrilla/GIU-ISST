@@ -64,27 +64,12 @@ El desarrollo se ha realizado siguiendo metodología Scrum, organizado en tres s
 - Sprint 2: desarrollo inicial del frontend y backend  
 - Sprint 3: integración, mejora del sistema y finalización  
 
-## Limitaciones
-
-- Uso de base de datos en memoria (H2)  
-- Algunas funcionalidades de asignación de incidencias no están completamente implementadas  
-- Integración con servicios externos (como geolocalización) pendiente  
-- Validaciones y control de errores mejorables  
-
-## Trabajo futuro
-
-- Persistencia con base de datos real (MySQL/PostgreSQL)  
-- Implementación completa del flujo de asignación de incidencias  
-- Integración con mapas para geolocalización  
-- Mejora de estadísticas  
-- Refuerzo de seguridad y control de accesos  
-
 ## Documentación
 
 - Documento de Visión (VD)  
 - Plan de Desarrollo del Software (SDP)  
 - Documento de Diseño (SDD)  
-- Diagramas C4  
+- DDocumento de pruebas (TC)  
 
 ## Conclusión
 
