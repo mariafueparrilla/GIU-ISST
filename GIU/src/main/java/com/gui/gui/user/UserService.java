@@ -15,6 +15,7 @@ import org.springframework.web.server.ResponseStatusException;
 import com.gui.gui.incident.IncidentCategory;
 import com.gui.gui.incident.IncidentReportRepository;
 import com.gui.gui.incident.IncidentRepository;
+import com.gui.gui.user.dto.AdminUserUpdateRequest;
 import com.gui.gui.user.dto.LoginRequest;
 import com.gui.gui.user.dto.LoginResponse;
 import com.gui.gui.user.dto.UserCreateRequest;
@@ -105,6 +106,7 @@ public class UserService {
         UserEntity user = new UserEntity();
         user.setDni(normalizedDni);
         user.setName(request.name().trim());
+        user.setSurname(request.surname() == null ? null : request.surname().trim());
         user.setEmail(request.email().trim().toLowerCase(Locale.ROOT));
         user.setPassword(passwordEncoder.encode(request.password()));
         UserRole role = parseRole(request.role());
@@ -154,9 +156,63 @@ public class UserService {
         validateEmail(request.email());
 
         user.setName(request.name().trim());
+        user.setSurname(request.surname() == null ? null : request.surname().trim());
         user.setEmail(request.email().trim().toLowerCase(Locale.ROOT));
+        
+        // Actualizar contraseña si se proporciona
+        if (!isBlank(request.password())) {
+            user.setPassword(passwordEncoder.encode(request.password().trim()));
+        }
 
         return toResponse(userRepository.save(user));
+    }
+
+    /**
+     * Actualiza todos los campos de un usuario (solo admin).
+     * Puede cambiar DNI, rol, equipo técnico.
+     */
+    @Transactional
+    public UserResponse adminUpdateUser(String dni, AdminUserUpdateRequest request) {
+        if (isBlank(dni) || request == null || isBlank(request.name()) || isBlank(request.email()) || 
+            isBlank(request.newDni()) || isBlank(request.role())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "name, email, newDni y role son obligatorios");
+        }
+
+        String normalizedDni = dni.trim().toUpperCase(Locale.ROOT);
+        String normalizedNewDni = request.newDni().trim().toUpperCase(Locale.ROOT);
+
+        if (!normalizedNewDni.matches("^\\d{8}[A-Z]$")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Formato de DNI invalido");
+        }
+
+        validateEmail(request.email());
+
+        UserEntity user = userRepository.findById(requireNonNull(normalizedDni))
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
+
+        // Si cambia DNI, validar que el nuevo DNI no exista
+        if (!normalizedDni.equals(normalizedNewDni) && userRepository.existsById(requireNonNull(normalizedNewDni))) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe un usuario con ese DNI");
+        }
+
+        user.setName(request.name().trim());
+        user.setSurname(request.surname() == null ? null : request.surname().trim());
+        user.setEmail(request.email().trim().toLowerCase(Locale.ROOT));
+        
+        UserRole newRole = parseRole(request.role());
+        user.setRole(newRole);
+        user.setTechnicalTeam(resolveTechnicalTeam(newRole, request.technicalTeam()));
+
+        userRepository.save(user);
+
+        // Si cambió DNI, eliminar entrada antigua
+        if (!normalizedDni.equals(normalizedNewDni)) {
+            user.setDni(normalizedNewDni);
+            userRepository.save(user);
+            userRepository.deleteById(requireNonNull(normalizedDni));
+        }
+
+        return toResponse(user);
     }
 
     private String normalizeDni(String dni) {
@@ -254,6 +310,7 @@ public class UserService {
         return new UserResponse(
             user.getDni(),
             user.getName(),
+            user.getSurname(),
             user.getEmail(),
             user.getRole().name().toLowerCase(Locale.ROOT),
             toTechnicalTeamValue(user)

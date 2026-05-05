@@ -50,9 +50,12 @@ public class SecurityConfig {
                     "/**/*.css",
                     "/h2-console/**"
                 ).permitAll()
+                // Vistas de administración: solo para ADMIN.
+                .requestMatchers("/admin-dashboard", "/admin-dashboard.html", "/admin-user-edit", "/admin-user-edit.html").hasRole("ADMIN")
+                // Vistas de edición de perfil propio: para cualquier autenticado.
+                .requestMatchers("/user-edit", "/user-edit.html").authenticated()
                 // Vistas de aplicación: se dejan accesibles a cualquier sesión autenticada.
                 // La propia UI redirige según el rol real del usuario.
-                .requestMatchers("/admin-dashboard", "/admin-dashboard.html", "/admin-user-edit", "/admin-user-edit.html").authenticated()
                 .requestMatchers("/dashboard", "/dashboard.html", "/new-incident", "/new-incident.html").authenticated()
                 .requestMatchers("/technician-profile", "/technician-profile.html").authenticated()
                 .requestMatchers("/operator-dashboard", "/operator-dashboard.html").authenticated()
@@ -62,6 +65,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.DELETE, "/api/users/*").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/users/*").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/users/*").authenticated()
+                .requestMatchers(HttpMethod.PUT, "/api/users/admin-edit/*").hasRole("ADMIN")
                 // API de incidencias de administracion.
                 .requestMatchers(HttpMethod.GET, "/api/incidents").hasAnyRole("ADMIN", "OPERATOR")
                 .requestMatchers(HttpMethod.PATCH, "/api/incidents/*/state").hasRole("OPERATOR")

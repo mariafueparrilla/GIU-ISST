@@ -9,5 +9,5 @@ package com.gui.gui.user.dto;
  * @param role rol funcional.
  * @param technicalTeam equipo tecnico del usuario (si aplica).
  */
-public record UserResponse(String dni, String name, String email, String role, String technicalTeam) {
+public record UserResponse(String dni, String name, String surname, String email, String role, String technicalTeam) {
 }

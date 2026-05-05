@@ -13,7 +13,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
+import com.gui.gui.user.dto.AdminUserUpdateRequest;
 import com.gui.gui.user.dto.UserCreateRequest;
 import com.gui.gui.user.dto.UserResponse;
 import com.gui.gui.user.dto.UserUpdateRequest;
@@ -70,6 +72,19 @@ public class UserController {
         boolean requesterIsAdmin = authentication != null && authentication.getAuthorities().stream()
             .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
         return userService.updateUser(dni, request, requesterDni, requesterIsAdmin);
+    }
+
+    /**
+     * Actualiza todos los campos de un usuario (solo admin).
+     */
+    @PutMapping("/admin-edit/{dni}")
+    public UserResponse adminUpdateUser(@PathVariable String dni, @RequestBody AdminUserUpdateRequest request, Authentication authentication) {
+        boolean requesterIsAdmin = authentication != null && authentication.getAuthorities().stream()
+            .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
+        if (!requesterIsAdmin) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo administradores pueden editar usuarios");
+        }
+        return userService.adminUpdateUser(dni, request);
     }
 
     /**

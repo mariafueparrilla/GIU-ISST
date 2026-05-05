@@ -10,5 +10,5 @@ package com.gui.gui.user.dto;
  * @param role rol solicitado para el usuario.
  * @param technicalTeam equipo tecnico asociado (solo para rol technician).
  */
-public record UserCreateRequest(String dni, String name, String email, String password, String role, String technicalTeam) {
+public record UserCreateRequest(String dni, String name, String surname, String email, String password, String role, String technicalTeam) {
 }

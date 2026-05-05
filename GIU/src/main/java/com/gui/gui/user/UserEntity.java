@@ -24,6 +24,10 @@ public class UserEntity {
     /** Nombre visible en paneles y cabeceras. */
     @Column(name = "name", nullable = false, length = 120)
     private String name;
+    
+    /** Apellido del usuario separado del nombre. */
+    @Column(name = "surname", length = 120)
+    private String surname;
 
     /** Correo electronico del usuario para contacto/gestion. */
     @Column(name = "email", nullable = false, length = 160)
@@ -57,6 +61,14 @@ public class UserEntity {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getSurname() {
+        return surname;
+    }
+
+    public void setSurname(String surname) {
+        this.surname = surname;
     }
 
     public String getEmail() {

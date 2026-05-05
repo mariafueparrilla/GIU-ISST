@@ -42,6 +42,7 @@ public class UserDataInitializer {
                 UserEntity admin = new UserEntity();
                 admin.setDni("12345678A");
                 admin.setName("Noelia");
+                admin.setSurname("García");
                 admin.setEmail("noelia@urfix.com");
                 admin.setPassword(passwordEncoder.encode("admin123"));
                 admin.setRole(UserRole.ADMIN);
@@ -49,6 +50,7 @@ public class UserDataInitializer {
                 UserEntity user = new UserEntity();
                 user.setDni("87654321B");
                 user.setName("Maria");
+                user.setSurname("López");
                 user.setEmail("maria@urfix.com");
                 user.setPassword(passwordEncoder.encode("user123"));
                 user.setRole(UserRole.USER);
@@ -56,6 +58,7 @@ public class UserDataInitializer {
                 UserEntity technician = new UserEntity();
                 technician.setDni("11223344T");
                 technician.setName("Carlos");
+                technician.setSurname("Rodríguez");
                 technician.setEmail("carlos@urfix.com");
                 technician.setPassword(passwordEncoder.encode("tech123"));
                 technician.setRole(UserRole.TECHNICIAN);
@@ -70,7 +73,8 @@ public class UserDataInitializer {
             if (!userRepository.existsById("00000000T")) {
                 UserEntity testTechnician = new UserEntity();
                 testTechnician.setDni("00000000T");
-                testTechnician.setName("Tecnico Prueba");
+                testTechnician.setName("Tecnico");
+                testTechnician.setSurname("Prueba");
                 testTechnician.setEmail("tecnico.prueba@urfix.com");
                 testTechnician.setPassword(passwordEncoder.encode("tec"));
                 testTechnician.setRole(UserRole.TECHNICIAN);
@@ -81,7 +85,8 @@ public class UserDataInitializer {
             if (!userRepository.existsById("00000000O")) {
                 UserEntity testOperator = new UserEntity();
                 testOperator.setDni("00000000O");
-                testOperator.setName("Operario Prueba");
+                testOperator.setName("Operario");
+                testOperator.setSurname("Prueba");
                 testOperator.setEmail("operario.prueba@urfix.com");
                 testOperator.setPassword(passwordEncoder.encode("ope"));
                 testOperator.setRole(UserRole.OPERATOR);

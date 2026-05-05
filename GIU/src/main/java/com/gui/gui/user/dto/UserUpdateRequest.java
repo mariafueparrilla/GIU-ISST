@@ -6,5 +6,5 @@ package com.gui.gui.user.dto;
  * @param name nuevo nombre.
  * @param email nuevo email.
  */
-public record UserUpdateRequest(String name, String email) {
+public record UserUpdateRequest(String name, String surname, String email, String password) {
 }

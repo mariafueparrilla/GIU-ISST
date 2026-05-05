@@ -11,14 +11,6 @@ const roleMap = {
   technician: 'Tecnico'
 };
 
-const teamMap = {
-  alumbrado: 'Alumbrado',
-  agua: 'Agua',
-  mobiliario: 'Mobiliario',
-  residuos: 'Residuos',
-  limpieza: 'Limpieza'
-};
-
 async function loadSessionUser() {
   const response = await fetch('/api/auth/me', { credentials: 'same-origin' });
   if (!response.ok) {
@@ -44,16 +36,6 @@ async function loadTargetUser() {
 function renderEditPage() {
   const app = document.getElementById('app');
 
-  const roleOptions = ['user', 'operator', 'technician', 'admin']
-    .map(role => `<option value="${role}" ${targetUser.role === role ? 'selected' : ''}>${roleMap[role]}</option>`)
-    .join('');
-
-  const teamOptions = ['alumbrado', 'agua', 'mobiliario', 'residuos', 'limpieza']
-    .map(team => `<option value="${team}" ${targetUser.technicalTeam === team ? 'selected' : ''}>${teamMap[team]}</option>`)
-    .join('');
-
-  const showTeamField = targetUser.role === 'technician';
-
   app.innerHTML = `
     <div class="min-h-full bg-surface-50">
       <header class="w-full bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
@@ -67,7 +49,7 @@ function renderEditPage() {
         <div class="flex items-center gap-3 text-sm text-slate-600">
           <i data-lucide="shield" style="width:16px;height:16px;"></i>
           <span>${currentUser.name}</span>
-          <span class="px-2 py-1 rounded-full bg-brand-100 text-brand-600 font-medium">${roleMap[currentUser.role] || 'Administrador'}</span>
+          <span class="px-2 py-1 rounded-full bg-brand-100 text-brand-600 font-medium">${roleMap[currentUser.role] || 'Usuario'}</span>
           <button id="logout-btn" class="ml-2 text-slate-500 hover:text-slate-700">
             <i data-lucide="log-out" style="width:18px;height:18px;"></i>
           </button>
@@ -77,7 +59,7 @@ function renderEditPage() {
       <main class="px-6 py-8">
         <div class="max-w-2xl mx-auto">
           <div class="flex items-center justify-between mb-6">
-            <h1 class="text-3xl font-bold text-slate-900">Editar usuario</h1>
+            <h1 class="text-3xl font-bold text-slate-900">Mi perfil</h1>
             <button id="back-btn" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-100">
               Volver
             </button>
@@ -85,6 +67,17 @@ function renderEditPage() {
 
           <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
             <form id="edit-user-form" class="space-y-5">
+                <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">DNI</label>
+                <input
+                  id="dni"
+                  type="text"
+                  value="${targetUser.dni || ''}"
+                  disabled
+                  class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-slate-100 text-sm text-slate-600 cursor-not-allowed"
+                >
+              </div>
+
               <div>
                 <label class="block text-sm font-semibold text-slate-700 mb-2">Nombre</label>
                 <input
@@ -107,17 +100,6 @@ function renderEditPage() {
               </div>
 
               <div>
-                <label class="block text-sm font-semibold text-slate-700 mb-2">DNI</label>
-                <input
-                  id="dni"
-                  type="text"
-                  value="${targetUser.dni || ''}"
-                  required
-                  class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-surface-50 text-sm text-slate-700"
-                >
-              </div>
-
-              <div>
                 <label class="block text-sm font-semibold text-slate-700 mb-2">Email</label>
                 <input
                   id="email"
@@ -127,30 +109,25 @@ function renderEditPage() {
                   class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-surface-50 text-sm text-slate-700"
                 >
               </div>
-
+              <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Contraseña (dejar en blanco para no cambiar)</label>
+                <input
+                  id="password"
+                  type="password"
+                  placeholder="Nueva contraseña (opcional)"
+                  class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-surface-50 text-sm text-slate-700"
+                >
+              </div>
               <div>
                 <label class="block text-sm font-semibold text-slate-700 mb-2">Rol</label>
-                <select
+                <input
                   id="role"
-                  required
-                  class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-surface-50 text-sm text-slate-700"
+                  type="text"
+                  value="${roleMap[targetUser.role] || targetUser.role}"
+                  disabled
+                  class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-slate-100 text-sm text-slate-600 cursor-not-allowed"
                 >
-                  ${roleOptions}
-                </select>
               </div>
-
-              ${showTeamField ? `
-              <div>
-                <label class="block text-sm font-semibold text-slate-700 mb-2">Equipo Técnico</label>
-                <select
-                  id="technicalTeam"
-                  class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-surface-50 text-sm text-slate-700"
-                >
-                  <option value="">Seleccionar equipo</option>
-                  ${teamOptions}
-                </select>
-              </div>
-              ` : ''}
 
               <div class="flex gap-3 pt-2">
                 <button
@@ -185,10 +162,9 @@ function attachEvents() {
   const cancelBtn = document.getElementById('cancel-btn');
   const logoutBtn = document.getElementById('logout-btn');
   const form = document.getElementById('edit-user-form');
-  const roleSelect = document.getElementById('role');
 
   const goBack = () => {
-    window.location.href = '/admin-dashboard';
+    window.location.href = '/dashboard';
   };
 
   backBtn.addEventListener('click', goBack);
@@ -200,40 +176,27 @@ function attachEvents() {
     window.location.href = '/login';
   });
 
-  roleSelect.addEventListener('change', () => {
-    const technicalTeamDiv = document.getElementById('technicalTeam')?.parentElement;
-    if (roleSelect.value === 'technician' && technicalTeamDiv) {
-      technicalTeamDiv.style.display = 'block';
-    } else if (technicalTeamDiv) {
-      technicalTeamDiv.style.display = 'none';
-    }
-  });
-
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
 
     const name = document.getElementById('name').value.trim();
     const surname = document.getElementById('surname').value.trim();
     const email = document.getElementById('email').value.trim();
-    const newDni = document.getElementById('dni').value.trim().toUpperCase();
-    const role = document.getElementById('role').value;
-    const technicalTeam = document.getElementById('technicalTeam')?.value || null;
+    const password = document.getElementById('password').value.trim();
 
-    if (!name || !email || !newDni || !role) {
-      alert('Nombre, email, DNI y rol son obligatorios');
+    if (!name || !email) {
+      alert('Nombre y email son obligatorios');
       return;
     }
 
-    const response = await fetch(`/api/users/admin-edit/${encodeURIComponent(dni)}`, {
+    const response = await fetch(`/api/users/${encodeURIComponent(dni)}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name,
         surname,
         email,
-        newDni,
-        role,
-        technicalTeam
+        password: password || null
       })
     });
 
@@ -243,7 +206,7 @@ function attachEvents() {
       return;
     }
 
-    window.location.href = '/admin-dashboard';
+    window.location.href = '/dashboard';
   });
 }
 
@@ -253,8 +216,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadTargetUser();
     renderEditPage();
   } catch (error) {
-    console.error('Error loading user:', error);
-    alert('No se pudo cargar el usuario: ' + error.message);
-    window.location.href = '/admin-dashboard';
+    console.error('Error loading profile:', error);
+    alert('No se pudo cargar el perfil: ' + error.message);
+    window.location.href = '/dashboard';
   }
 });

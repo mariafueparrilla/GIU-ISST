@@ -677,7 +677,7 @@ function attachHeaderActions() {
   const editProfileBtn = document.getElementById("edit-profile-btn");
   if (editProfileBtn) {
     editProfileBtn.addEventListener("click", () => {
-      window.location.href = `/admin-user-edit?dni=${encodeURIComponent(currentUser.dni)}`;
+      window.location.href = `/user-edit?dni=${encodeURIComponent(currentUser.dni)}`;
     });
   }
 

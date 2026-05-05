@@ -51,6 +51,14 @@ public class WebPageController {
     }
 
     /**
+     * Vista de edicion de perfil del usuario.
+     */
+    @GetMapping({"/user-edit", "/user-edit.html"})
+    public String userEditPage() {
+        return "user-edit";
+    }
+
+    /**
      * Vista para crear una nueva incidencia.
      */
     @GetMapping({"/new-incident", "/new-incident.html"})

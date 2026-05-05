@@ -73,6 +73,7 @@ public class AuthController {
         UserCreateRequest safeRequest = new UserCreateRequest(
             request.dni(),
             request.name(),
+            request.surname(),
             request.email(),
             request.password(),
             "user",
