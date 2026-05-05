@@ -161,10 +161,7 @@ function renderIncidentCard(incident) {
         <div class="flex items-center gap-2 flex-wrap justify-end">
           ${isResolved ? `
             <button class="confirm-resolution-btn px-3 py-2 rounded-xl text-white text-sm font-semibold" style="background:#7c3aed;" data-id="${incident.id}">
-              Confirmar resolución
-            </button>
-            <button class="reopen-team-btn px-3 py-2 rounded-xl text-white text-sm font-semibold" style="background:#0f766e;" data-id="${incident.id}">
-              No concluida
+              Revisar resolución
             </button>
           ` : ''}
           ${isCreada ? `` : ''}
@@ -332,11 +329,7 @@ async function rejectIncident(incidentId) {
 }
 
 async function confirmResolutionIncident(incidentId) {
-  await updateOperatorIncidentState(incidentId, 'CERRADA', 'No se pudo confirmar la resolución');
-}
-
-async function reopenToTeamIncident(incidentId) {
-  await updateOperatorIncidentState(incidentId, 'ASIGNADA', 'No se pudo devolver la incidencia al equipo');
+  window.location.href = `/incident-detail?id=${incidentId}`;
 }
 
 function attachEvents() {
@@ -409,15 +402,6 @@ function attachEvents() {
         return;
       }
       await confirmResolutionIncident(button.dataset.id);
-    });
-  });
-
-  document.querySelectorAll('.reopen-team-btn').forEach((button) => {
-    button.addEventListener('click', async () => {
-      if (button.disabled) {
-        return;
-      }
-      await reopenToTeamIncident(button.dataset.id);
     });
   });
 }

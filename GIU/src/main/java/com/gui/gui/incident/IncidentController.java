@@ -3,6 +3,8 @@ package com.gui.gui.incident;
 import com.gui.gui.incident.dto.IncidentCreateRequest;
 import com.gui.gui.incident.dto.IncidentAssignmentRequest;
 import com.gui.gui.incident.dto.IncidentOperatorValidationRequest;
+import com.gui.gui.incident.dto.IncidentReportRequest;
+import com.gui.gui.incident.dto.IncidentResolutionReviewRequest;
 import com.gui.gui.incident.dto.IncidentResponse;
 import com.gui.gui.incident.dto.IncidentPreviewResponse;
 import com.gui.gui.incident.dto.IncidentStateUpdateRequest;
@@ -101,6 +103,22 @@ public class IncidentController {
     @PatchMapping("/{id}/operator-validate")
     public IncidentResponse operatorValidate(@PathVariable Long id, @RequestBody IncidentOperatorValidationRequest request, Authentication authentication) {
         return incidentService.operatorValidateAndAssign(authentication.getName(), id, request);
+    }
+
+    /**
+     * Crea el informe tecnico de una incidencia en curso.
+     */
+    @PostMapping("/{id}/report")
+    public IncidentResponse addReport(@PathVariable Long id, @RequestBody IncidentReportRequest request, Authentication authentication) {
+        return incidentService.createTechnicianReport(authentication.getName(), id, request);
+    }
+
+    /**
+     * Revisa la resolucion propuesta por el tecnico.
+     */
+    @PatchMapping("/{id}/review-resolution")
+    public IncidentResponse reviewResolution(@PathVariable Long id, @RequestBody IncidentResolutionReviewRequest request, Authentication authentication) {
+        return incidentService.reviewTechnicianResolution(authentication.getName(), id, request);
     }
 
     // seed-test endpoint removed per request

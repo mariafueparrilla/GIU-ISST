@@ -21,6 +21,10 @@ import java.util.List;
  * @param creatorDni dni del usuario creador.
  * @param ubicacion ubicacion asociada.
  * @param images lista de imagenes asociadas.
+ * @param report informe tecnico asociado.
+ * @param operatorReviewComment comentario del operario al rechazar.
+ * @param operatorReviewDate instante del comentario del operario.
+ * @param operatorReviewDni dni del operario revisor.
  */
 public record IncidentResponse(
     Long id,
@@ -42,6 +46,10 @@ public record IncidentResponse(
     String closerDni,
     String rejecterDni,
     IncidentLocationResponse ubicacion,
-    List<IncidentImageResponse> images
+    List<IncidentImageResponse> images,
+    IncidentReportResponse report,
+    String operatorReviewComment,
+    Instant operatorReviewDate,
+    String operatorReviewDni
 ) {
 }

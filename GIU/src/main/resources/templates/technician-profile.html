@@ -111,6 +111,50 @@
 
     </div>
 
+    <!-- MODAL INFORME TECNICO -->
+    <div id="report-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/60 px-4">
+      <div class="w-full max-w-3xl rounded-3xl bg-white shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 flex-shrink-0">
+          <div>
+            <h2 class="text-xl font-bold text-slate-900">Rellenar informe</h2>
+            <p class="text-sm text-slate-500" id="report-modal-summary">Completa el informe tecnico antes de marcar la incidencia como resuelta.</p>
+          </div>
+          <button id="report-modal-close" type="button" class="text-slate-500 hover:text-slate-900">
+            <i data-lucide="x" style="width:20px;height:20px;"></i>
+          </button>
+        </div>
+
+        <div class="p-6 space-y-5 overflow-y-auto flex-1">
+          <div class="rounded-2xl bg-slate-50 border border-slate-200 p-4">
+            <p class="text-xs uppercase tracking-wide text-slate-400 font-semibold">Incidencia</p>
+            <p id="report-modal-incident-title" class="text-lg font-semibold text-slate-900 mt-1"></p>
+            <p id="report-modal-incident-meta" class="text-sm text-slate-500 mt-1"></p>
+          </div>
+
+          <div>
+            <label for="report-description" class="block text-sm font-semibold text-slate-700 mb-2">Descripcion del informe</label>
+            <textarea id="report-description" rows="4" class="w-full px-4 py-3 rounded-2xl border border-slate-300 bg-white text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-200" placeholder="Describe brevemente lo que has comprobado o reparado"></textarea>
+          </div>
+
+          <div>
+            <label for="report-images-input" class="block text-sm font-semibold text-slate-700 mb-2">Imagenes obligatorias</label>
+            <input id="report-images-input" type="file" accept="image/*" multiple class="block w-full text-sm text-slate-600 file:mr-4 file:rounded-xl file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100" />
+            <p class="mt-2 text-xs text-slate-400">Minimo 1 y maximo 3 imagenes.</p>
+          </div>
+
+          <div>
+            <p class="text-sm font-semibold text-slate-700 mb-3">Previsualizacion</p>
+            <div id="report-image-previews" class="grid grid-cols-1 sm:grid-cols-3 gap-3"></div>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap justify-end gap-3 px-6 py-4 border-t border-slate-200 flex-shrink-0">
+          <button id="report-modal-cancel" type="button" class="px-4 py-3 rounded-xl border border-slate-300 text-slate-700 font-semibold hover:bg-slate-50">Cancelar</button>
+          <button id="report-modal-submit" type="button" class="px-4 py-3 rounded-xl bg-blue-500 text-white font-semibold hover:bg-blue-600">Guardar informe y resolver</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- JS -->

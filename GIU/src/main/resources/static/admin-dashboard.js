@@ -15,6 +15,7 @@ const stateLabelMap = {
   asignada: 'Asignada',
   en_curso: 'En curso',
   resuelta: 'Resuelta',
+  rechazada: 'Rechazada',
   cerrada: 'Cerrada'
 };
 

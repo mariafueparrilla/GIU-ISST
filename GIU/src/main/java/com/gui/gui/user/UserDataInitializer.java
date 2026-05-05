@@ -98,7 +98,6 @@ public class UserDataInitializer {
 
     private void seedIncidents(IncidentRepository incidentRepository, UserRepository userRepository) {
         UserEntity user = userRepository.findById("87654321B").orElseThrow();
-        UserEntity technicianCreator = userRepository.findById("00000000T").orElseThrow();
 
         incidentRepository.saveAll(List.of(
             createIncident(
@@ -121,12 +120,12 @@ public class UserDataInitializer {
                 "Sale agua de un registro y avanza por la acera.",
                 IncidentCategory.AGUA,
                 IncidentPriority.CRITICA,
-                IncidentState.ASIGNADA,
+                IncidentState.CREADA,
                 null,
-                technicianCreator,
+                user,
                 ubicacion("Madrid", "Paseo del Prado", 8, 28014, 40.4138, -3.6922),
                 -4,
-                -2,
+                null,
                 null,
                 null,
                 null
@@ -136,14 +135,14 @@ public class UserDataInitializer {
                 "Los bancos de la plaza tienen tablas rotas y tornillos sueltos.",
                 IncidentCategory.MOBILIARIO,
                 IncidentPriority.MEDIA,
-                IncidentState.CERRADA,
+                IncidentState.CREADA,
                 null,
                 user,
                 ubicacion("Madrid", "Plaza Mayor", 1, 28012, 40.4154, -3.7074),
                 -10,
-                -8,
-                -2,
-                -1,
+                null,
+                null,
+                null,
                 null
             ),
             createIncident(
@@ -151,27 +150,12 @@ public class UserDataInitializer {
                 "El contenedor de residuos está agrietado y pierde basura.",
                 IncidentCategory.RESIDUOS,
                 IncidentPriority.MEDIA,
-                IncidentState.ASIGNADA,
-                IncidentCategory.RESIDUOS,
+                IncidentState.CREADA,
+                null,
                 user,
                 ubicacion("Madrid", "Calle Toledo", 90, 28005, 40.4109, -3.7101),
                 -5,
-                -4,
                 null,
-                null,
-                null
-            ),
-            createIncident(
-                "Bache en calzada",
-                "Hay un bache importante en el carril derecho.",
-                IncidentCategory.MOVILIDAD,
-                IncidentPriority.ALTA,
-                IncidentState.EN_CURSO,
-                IncidentCategory.MOVILIDAD,
-                user,
-                ubicacion("Madrid", "Avenida de América", 25, 28002, 40.4381, -3.6753),
-                -6,
-                -5,
                 null,
                 null,
                 null
@@ -181,13 +165,13 @@ public class UserDataInitializer {
                 "Hay basura y hojas acumuladas en la zona infantil.",
                 IncidentCategory.LIMPIEZA,
                 IncidentPriority.BAJA,
-                IncidentState.RESUELTA,
-                IncidentCategory.LIMPIEZA,
-                technicianCreator,
+                IncidentState.CREADA,
+                null,
+                user,
                 ubicacion("Madrid", "Parque del Retiro", 1, 28009, 40.4153, -3.6844),
                 -12,
-                -10,
-                -8,
+                null,
+                null,
                 null,
                 null
             )

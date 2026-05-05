@@ -129,6 +129,23 @@ public class IncidentEntity {
     @OneToMany(mappedBy = "incident", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<IncidentImageEntity> images = new ArrayList<>();
 
+    /** Informe tecnico asociado a la incidencia. */
+    @OneToOne(mappedBy = "incident", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private IncidentReportEntity report;
+
+    /** Comentario del operario cuando rechaza la resolucion. */
+    @Column(name = "operator_review_comment", length = 1200)
+    private String operatorReviewComment;
+
+    /** Instante del ultimo comentario de revision del operario. */
+    @Column(name = "operator_review_date")
+    private Instant operatorReviewDate;
+
+    /** DNI del operario que realizo la ultima revision. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "operator_reviewer_dni")
+    private UserEntity operatorReviewer;
+
     public Long getId() {
         return id;
     }
@@ -245,6 +262,38 @@ public class IncidentEntity {
 
     public void setImages(List<IncidentImageEntity> images) {
         this.images = images;
+    }
+
+    public IncidentReportEntity getReport() {
+        return report;
+    }
+
+    public void setReport(IncidentReportEntity report) {
+        this.report = report;
+    }
+
+    public String getOperatorReviewComment() {
+        return operatorReviewComment;
+    }
+
+    public void setOperatorReviewComment(String operatorReviewComment) {
+        this.operatorReviewComment = operatorReviewComment;
+    }
+
+    public Instant getOperatorReviewDate() {
+        return operatorReviewDate;
+    }
+
+    public void setOperatorReviewDate(Instant operatorReviewDate) {
+        this.operatorReviewDate = operatorReviewDate;
+    }
+
+    public UserEntity getOperatorReviewer() {
+        return operatorReviewer;
+    }
+
+    public void setOperatorReviewer(UserEntity operatorReviewer) {
+        this.operatorReviewer = operatorReviewer;
     }
 
     public Instant getCreationInstant() {

@@ -44,6 +44,8 @@ let technicianIncidents = [];
 let teamFilterStatus = "all";
 let teamSearchQuery = "";
 let draggedIncidentId = null;
+let reportDraftIncidentId = null;
+let reportDraftImages = [];
 
 async function loadSessionUser() {
   const response = await fetch("/api/auth/me", { credentials: "same-origin" });
@@ -106,6 +108,188 @@ function formatDate(value) {
     hour: "2-digit",
     minute: "2-digit"
   });
+}
+
+async function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(",")[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function renderReportImagePreviews() {
+  const container = document.getElementById("report-image-previews");
+  if (!container) return;
+
+  if (reportDraftImages.length === 0) {
+    container.innerHTML = '<p class="text-sm text-slate-400">Todavia no has seleccionado imagenes.</p>';
+    return;
+  }
+
+  container.innerHTML = reportDraftImages.map((img, idx) => `
+    <div class="relative rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-sm">
+      <img src="data:${img.mimeType};base64,${img.imageData}" alt="Informe ${idx + 1}" class="w-full h-32 object-cover" />
+      <button type="button" data-idx="${idx}" class="remove-report-image-btn absolute top-2 right-2 rounded-full bg-white/90 p-1 text-slate-700 shadow hover:bg-white">
+        <i data-lucide="x" style="width:14px;height:14px;"></i>
+      </button>
+      <p class="px-2 py-1 text-xs text-slate-500 bg-slate-50 truncate">${img.filename}</p>
+    </div>
+  `).join("");
+
+  lucide.createIcons();
+
+  document.querySelectorAll(".remove-report-image-btn").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      const idx = Number(button.dataset.idx);
+      reportDraftImages.splice(idx, 1);
+      renderReportImagePreviews();
+    });
+  });
+}
+
+function openReportModal(incident) {
+  reportDraftIncidentId = incident.id;
+  reportDraftImages = [];
+
+  const modal = document.getElementById("report-modal");
+  const titleEl = document.getElementById("report-modal-incident-title");
+  const metaEl = document.getElementById("report-modal-incident-meta");
+  const descriptionEl = document.getElementById("report-description");
+  const imagesInput = document.getElementById("report-images-input");
+
+  if (!modal || !titleEl || !metaEl || !descriptionEl || !imagesInput) {
+    return;
+  }
+
+  titleEl.textContent = incident.title;
+  metaEl.textContent = `#${incident.id} · ${normalizeTeamLabel(incident.assignedTeam)} · ${formatDate(incident.creationDate)}`;
+  descriptionEl.value = "";
+  imagesInput.value = "";
+  renderReportImagePreviews();
+
+  modal.classList.remove("hidden");
+  modal.classList.add("flex");
+}
+
+function closeReportModal() {
+  reportDraftIncidentId = null;
+  reportDraftImages = [];
+
+  const modal = document.getElementById("report-modal");
+  const descriptionEl = document.getElementById("report-description");
+  const imagesInput = document.getElementById("report-images-input");
+
+  if (modal) {
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
+  }
+
+  if (descriptionEl) {
+    descriptionEl.value = "";
+  }
+
+  if (imagesInput) {
+    imagesInput.value = "";
+  }
+
+  renderReportImagePreviews();
+}
+
+async function addReportImages(files) {
+  for (const file of files) {
+    if (!file.type.startsWith("image/")) {
+      alert("Solo se permiten archivos de imagen");
+      continue;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("La imagen no puede exceder 5MB");
+      continue;
+    }
+
+    if (reportDraftImages.length >= 3) {
+      alert("El informe admite como maximo 3 imagenes");
+      break;
+    }
+
+    const base64 = await fileToBase64(file);
+    reportDraftImages.push({
+      filename: file.name,
+      mimeType: file.type,
+      imageData: base64,
+      fileSize: file.size
+    });
+  }
+
+  renderReportImagePreviews();
+}
+
+async function submitTechnicianReport() {
+  if (!reportDraftIncidentId) {
+    return;
+  }
+
+  if (reportDraftImages.length === 0) {
+    alert("Debes adjuntar al menos una imagen");
+    return;
+  }
+
+  const description = document.getElementById("report-description")?.value?.trim() || "";
+  const submitBtn = document.getElementById("report-modal-submit");
+
+  if (submitBtn) {
+    submitBtn.disabled = true;
+  }
+
+  try {
+    const reportResponse = await fetch(`${API_BASE}/${reportDraftIncidentId}/report`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({
+        description,
+        images: reportDraftImages
+      })
+    });
+
+    if (!reportResponse.ok) {
+      const message = await reportResponse.text();
+      alert(message || "No se pudo guardar el informe");
+      return;
+    }
+
+    const resolveResponse = await fetch(`${API_BASE}/${reportDraftIncidentId}/team-state`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ state: "RESUELTA" })
+    });
+
+    if (!resolveResponse.ok) {
+      const message = await resolveResponse.text();
+      alert(message || "El informe se guardo, pero no se pudo marcar la incidencia como resuelta");
+      await loadIncidents();
+      renderTechnicianProfileData();
+      renderTechnicianKanban();
+      closeReportModal();
+      return;
+    }
+
+    await loadIncidents();
+    renderTechnicianProfileData();
+    renderTechnicianKanban();
+    closeReportModal();
+  } catch (error) {
+    console.error(error);
+    alert(error.message || "No se pudo guardar el informe");
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+    }
+  }
 }
 
 function getPriorityClass(priority) {
@@ -244,30 +428,29 @@ function createTechnicianIncidentCard(incident) {
     <p class="text-sm text-slate-600 mb-2">${incident.description}</p>
 
     <div class="flex flex-wrap items-center gap-3 text-xs text-slate-400 mb-3">
-      <span>${incident.address}</span>
       <span>${formatDate(incident.creationDate)}</span>
     </div>
 
     <div class="flex gap-2 flex-wrap">
-      <select
-        class="status-select px-3 py-2 rounded-xl border-2 border-slate-200 text-xs font-bold text-slate-700"
-        data-id="${incident.id}"
-      >
-        <option value="pending" ${incident.uiStatus === "pending" ? "selected" : ""}>Pendiente</option>
-        <option value="in_progress" ${incident.uiStatus === "in_progress" ? "selected" : ""}>En progreso</option>
-        <option value="resolved" ${incident.uiStatus === "resolved" ? "selected" : ""}>Resuelta</option>
-      </select>
-      <button
-        type="button"
-        class="px-3 py-2 rounded-xl border-2 border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 transition cycle-status-btn"
-        data-id="${incident.id}"
-      >
-        Cambiar estado
-      </button>
+      ${incident.uiStatus === "in_progress" ? `
+        <button
+          type="button"
+          class="add-report-btn px-3 py-2 rounded-xl bg-blue-500 text-white text-xs font-bold hover:bg-blue-600 transition"
+          data-id="${incident.id}"
+        >
+          Rellenar informe
+        </button>
+      ` : ""}
     </div>
   `;
 
+  const isDraggable = incident.uiStatus === "pending" || incident.uiStatus === "in_progress";
+
   wrapper.addEventListener("dragstart", (event) => {
+    if (!isDraggable) {
+      event.preventDefault();
+      return;
+    }
     draggedIncidentId = incident.id;
     wrapper.classList.add("opacity-50");
     event.dataTransfer.effectAllowed = "move";
@@ -278,9 +461,15 @@ function createTechnicianIncidentCard(incident) {
     wrapper.classList.remove("opacity-50");
   });
 
-  // Add click handler for detail view (only if not clicking buttons or select)
+  if (!isDraggable) {
+    wrapper.style.cursor = "default";
+  } else {
+    wrapper.draggable = true;
+  }
+
+  // Add click handler for detail view (only if not clicking buttons)
   wrapper.addEventListener("click", (e) => {
-    if (e.target.closest("button") || e.target.closest("select")) {
+    if (e.target.closest("button")) {
       return;
     }
     window.location.href = `/incident-detail?id=${incident.id}`;
@@ -332,9 +521,13 @@ function renderColumnContent(columnElement, incidents, emptyMessage) {
 
 function attachDropEvents() {
   const columns = document.querySelectorAll(".kanban-column");
+  const allowedDropColumns = new Set(["pending", "in_progress"]);
 
   columns.forEach((column) => {
     column.addEventListener("dragover", (event) => {
+      if (!allowedDropColumns.has(column.id)) {
+        return;
+      }
       event.preventDefault();
       event.dataTransfer.dropEffect = "move";
       column.classList.add("bg-slate-100", "rounded-xl");
@@ -346,6 +539,11 @@ function attachDropEvents() {
 
     column.addEventListener("drop", async () => {
       column.classList.remove("bg-slate-100", "rounded-xl");
+
+      if (!allowedDropColumns.has(column.id)) {
+        draggedIncidentId = null;
+        return;
+      }
 
       if (!draggedIncidentId) return;
 
@@ -375,8 +573,20 @@ async function updateTechnicianIncidentStatus(incidentId, newUiStatus) {
   });
 
   if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || "No se pudo actualizar el estado de la incidencia");
+    let message = "No se pudo actualizar el estado de la incidencia";
+    try {
+      const errorData = await response.json();
+      if (errorData.message) {
+        message = errorData.message;
+      }
+    } catch {
+      try {
+        message = await response.text();
+      } catch {
+        // keep default message
+      }
+    }
+    throw new Error(message);
   }
 
   await loadIncidents();
@@ -385,24 +595,53 @@ async function updateTechnicianIncidentStatus(incidentId, newUiStatus) {
 }
 
 function attachCardButtons() {
-  const cycleButtons = document.querySelectorAll(".cycle-status-btn");
+  const addReportButtons = document.querySelectorAll(".add-report-btn");
 
-  cycleButtons.forEach((button) => {
-    button.addEventListener("click", async () => {
+  addReportButtons.forEach((button) => {
+    button.addEventListener("click", () => {
       const incidentId = Number(button.dataset.id);
       const incident = technicianIncidents.find((item) => item.id === incidentId);
       if (!incident) return;
 
-      try {
-        const select = document.querySelector(`.status-select[data-id="${incidentId}"]`);
-        const selectedStatus = select ? select.value : incident.uiStatus;
-        await updateTechnicianIncidentStatus(incidentId, selectedStatus);
-      } catch (error) {
-        console.error(error);
-        alert(error.message || "No se pudo cambiar el estado de la incidencia");
-      }
+      openReportModal(incident);
     });
   });
+}
+
+function attachReportModalActions() {
+  const modal = document.getElementById("report-modal");
+  const closeButton = document.getElementById("report-modal-close");
+  const cancelButton = document.getElementById("report-modal-cancel");
+  const submitButton = document.getElementById("report-modal-submit");
+  const imagesInput = document.getElementById("report-images-input");
+
+  if (modal) {
+    modal.addEventListener("click", (event) => {
+      if (event.target === modal) {
+        closeReportModal();
+      }
+    });
+  }
+
+  if (closeButton) {
+    closeButton.addEventListener("click", closeReportModal);
+  }
+
+  if (cancelButton) {
+    cancelButton.addEventListener("click", closeReportModal);
+  }
+
+  if (submitButton) {
+    submitButton.addEventListener("click", submitTechnicianReport);
+  }
+
+  if (imagesInput) {
+    imagesInput.addEventListener("change", async (event) => {
+      const files = Array.from(event.target.files || []);
+      await addReportImages(files);
+      imagesInput.value = "";
+    });
+  }
 }
 
 function attachTechnicianFilters() {
@@ -453,6 +692,7 @@ async function initTechnicianProfile() {
     renderTechnicianKanban();
     attachTechnicianFilters();
     attachHeaderActions();
+    attachReportModalActions();
   } catch (error) {
     console.error(error);
     window.location.href = "/login";

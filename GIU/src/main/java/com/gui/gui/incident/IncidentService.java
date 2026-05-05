@@ -2,9 +2,13 @@ package com.gui.gui.incident;
 
 import com.gui.gui.incident.dto.IncidentCreateRequest;
 import com.gui.gui.incident.dto.IncidentAssignmentRequest;
+import com.gui.gui.incident.dto.IncidentImageRequest;
 import com.gui.gui.incident.dto.IncidentOperatorValidationRequest;
 import com.gui.gui.incident.dto.IncidentLocationRequest;
 import com.gui.gui.incident.dto.IncidentLocationResponse;
+import com.gui.gui.incident.dto.IncidentReportRequest;
+import com.gui.gui.incident.dto.IncidentResolutionReviewRequest;
+import com.gui.gui.incident.dto.IncidentReportResponse;
 import com.gui.gui.incident.dto.IncidentResponse;
 import com.gui.gui.incident.dto.IncidentImageResponse;
 import com.gui.gui.incident.dto.IncidentPreviewResponse;
@@ -13,6 +17,7 @@ import com.gui.gui.user.UserRepository;
 import com.gui.gui.user.UserRole;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.Comparator;
 import java.util.List;
@@ -46,10 +51,14 @@ public class IncidentService {
     /** Repositorio de imagenes de incidencias. */
     private final IncidentImageRepository imageRepository;
 
-    public IncidentService(IncidentRepository incidentRepository, UserRepository userRepository, IncidentImageRepository imageRepository) {
+    /** Repositorio de informes tecnicos. */
+    private final IncidentReportRepository reportRepository;
+
+    public IncidentService(IncidentRepository incidentRepository, UserRepository userRepository, IncidentImageRepository imageRepository, IncidentReportRepository reportRepository) {
         this.incidentRepository = incidentRepository;
         this.userRepository = userRepository;
         this.imageRepository = imageRepository;
+        this.reportRepository = reportRepository;
     }
 
     /**
@@ -248,7 +257,123 @@ public class IncidentService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El tecnico solo puede usar estados ASIGNADA, EN_CURSO o RESUELTA");
         }
 
+        if (newState == IncidentState.RESUELTA && incident.getReport() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Para marcar una incidencia como resuelta deberás rellenar el informe primero");
+        }
+
         applyStateAndMilestoneDates(incident, newState, technician);
+        return toResponse(requireNonNull(incidentRepository.save(incident)));
+    }
+
+    /**
+     * Crea un informe tecnico para una incidencia en curso.
+     */
+    @Transactional
+    public IncidentResponse createTechnicianReport(String technicianDni, Long incidentId, IncidentReportRequest request) {
+        if (incidentId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "id de incidencia obligatorio");
+        }
+        if (request == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El informe es obligatorio");
+        }
+
+        UserEntity technician = resolveTechnician(technicianDni);
+        IncidentEntity incident = incidentRepository.findById(incidentId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incidencia no encontrada"));
+
+        if (incident.getAssignedTeam() != technician.getTechnicalTeam()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "La incidencia no pertenece al equipo tecnico");
+        }
+        if (incident.getState() != IncidentState.EN_CURSO) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Solo se puede añadir un informe cuando la incidencia esta EN_CURSO");
+        }
+        List<IncidentImageRequest> imageRequests = request.images();
+        if (imageRequests == null || imageRequests.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El informe debe incluir al menos una imagen");
+        }
+        if (imageRequests.size() > 3) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El informe admite como maximo 3 imagenes");
+        }
+
+        IncidentReportEntity report = incident.getReport();
+        if (report == null) {
+            report = reportRepository.findByIncident_Id(incidentId).orElse(null);
+        }
+
+        boolean isNewReport = report == null;
+        if (isNewReport) {
+            report = new IncidentReportEntity();
+            report.setIncident(incident);
+        }
+
+        report.setSender(technician);
+        report.setReportInstant(Instant.now());
+        report.setDescription(request.description() == null || request.description().trim().isEmpty() ? null : request.description().trim());
+
+        List<IncidentReportImageEntity> images = report.getImages();
+        images.clear();
+        for (IncidentImageRequest imageRequest : imageRequests) {
+            IncidentReportImageEntity imageEntity = new IncidentReportImageEntity();
+            imageEntity.setReport(report);
+            imageEntity.setFilename(imageRequest.filename());
+            imageEntity.setMimeType(imageRequest.mimeType());
+            imageEntity.setImageData(imageRequest.imageData());
+            imageEntity.setFileSize(imageRequest.fileSize());
+            images.add(imageEntity);
+        }
+
+        // A new technician report supersedes any prior operator review feedback.
+        incident.setOperatorReviewComment(null);
+        incident.setOperatorReviewDate(null);
+        incident.setOperatorReviewer(null);
+
+        incident.setReport(report);
+        reportRepository.saveAndFlush(report);
+
+        return toResponse(requireNonNull(incidentRepository.saveAndFlush(incident)));
+    }
+
+    /**
+     * Revisa la resolucion hecha por el tecnico: confirma y cierra, o rechaza y devuelve a EN_CURSO.
+     */
+    @Transactional
+    public IncidentResponse reviewTechnicianResolution(String operatorDni, Long incidentId, IncidentResolutionReviewRequest request) {
+        if (incidentId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "id de incidencia obligatorio");
+        }
+        if (request == null || request.approved() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "approved es obligatorio");
+        }
+
+        UserEntity operator = userRepository.findById(requireNonNull(normalizeDni(operatorDni)))
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no valido"));
+
+        if (operator.getRole() != UserRole.OPERATOR) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Acceso exclusivo para operarios");
+        }
+
+        IncidentEntity incident = incidentRepository.findById(incidentId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incidencia no encontrada"));
+
+        if (incident.getState() != IncidentState.RESUELTA) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Solo se puede revisar una incidencia RESUELTA");
+        }
+
+        incident.setOperatorReviewer(operator);
+        incident.setOperatorReviewDate(Instant.now());
+
+        if (Boolean.TRUE.equals(request.approved())) {
+            incident.setOperatorReviewComment(null);
+            applyStateAndMilestoneDates(incident, IncidentState.CERRADA, operator);
+        } else {
+            if (isBlank(request.comment())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debes indicar el motivo del rechazo");
+            }
+
+            incident.setOperatorReviewComment(request.comment().trim());
+            incident.setState(IncidentState.EN_CURSO);
+        }
+
         return toResponse(requireNonNull(incidentRepository.save(incident)));
     }
 
@@ -387,6 +512,28 @@ public class IncidentService {
             ))
             .toList();
 
+        IncidentReportResponse reportResponse = null;
+        if (incident.getReport() != null) {
+            IncidentReportEntity report = incident.getReport();
+            List<IncidentImageResponse> reportImageResponses = report.getImages().stream()
+                .map(img -> new IncidentImageResponse(
+                    img.getId(),
+                    img.getFilename(),
+                    img.getMimeType(),
+                    img.getImageData()
+                ))
+                .toList();
+
+            reportResponse = new IncidentReportResponse(
+                report.getId(),
+                report.getReportInstant(),
+                report.getSender().getDni(),
+                report.getSender().getName(),
+                report.getDescription(),
+                reportImageResponses
+            );
+        }
+
         return new IncidentResponse(
             incident.getId(),
             incident.getTitle(),
@@ -407,7 +554,11 @@ public class IncidentService {
             incident.getCloser() != null ? incident.getCloser().getDni() : null,
             incident.getRejecter() != null ? incident.getRejecter().getDni() : null,
             ubicacionResponse,
-            imageResponses
+            imageResponses,
+            reportResponse,
+            incident.getOperatorReviewComment(),
+            incident.getOperatorReviewDate(),
+            incident.getOperatorReviewer() != null ? incident.getOperatorReviewer().getDni() : null
         );
     }
 
@@ -514,7 +665,7 @@ public class IncidentService {
             incident.setAsignationDate(now);
             incident.setAssigner(user);
         }
-        if (newState == IncidentState.RESUELTA && incident.getResolutionDate() == null) {
+        if (newState == IncidentState.RESUELTA) {
             incident.setResolutionDate(now);
             incident.setResolver(user);
         }
