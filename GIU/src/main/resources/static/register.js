@@ -77,13 +77,13 @@ function renderRegister() {
   const app = document.getElementById('app');
 
   app.innerHTML = `
-    <div class="h-full w-full flex items-center justify-center p-4"
-         style="background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%);">
+    <div class="min-h-screen w-full flex items-center justify-center p-4"
+         style="background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%); background-attachment: fixed;">
       <div class="w-full max-w-md fade-in">
         <div class="text-center mb-8">
-          <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4"
-               style="background:${registerConfig.primaryColor};">
-            <i data-lucide="user-plus" style="width:32px;height:32px;color:white;"></i>
+          <div class="inline-flex items-center justify-center rounded-2xl mb-4"
+               style="background:${registerConfig.primaryColor}; width:80px; height:80px;">
+            <i data-lucide="user-plus" style="width:40px;height:40px;color:white;flex-shrink:0;"></i>
           </div>
 
           <h1 class="font-mono-brand text-3xl font-bold text-white tracking-tight">
