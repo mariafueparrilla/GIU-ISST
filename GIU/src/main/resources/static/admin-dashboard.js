@@ -236,7 +236,17 @@ function renderAdminDashboard() {
         </button>
 
         <button class="tab-btn flex items-center gap-2 text-slate-600 hover:text-slate-900 px-2 py-2" data-tab="equipos">
-          <i data-lucide="users-round" style="width:16px;height:16px;"></i>
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2" stroke="currentColor" stroke-width="2" fill="none"/>
+            <line x1="8" y1="21" x2="16" y2="21" stroke="currentColor" stroke-width="2"/>
+            <line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" stroke-width="2"/>
+            <circle cx="7" cy="9" r="1" fill="currentColor"/>
+            <circle cx="12" cy="9" r="1" fill="currentColor"/>
+            <circle cx="17" cy="9" r="1" fill="currentColor"/>
+            <circle cx="7" cy="13" r="1" fill="currentColor"/>
+            <circle cx="12" cy="13" r="1" fill="currentColor"/>
+            <circle cx="17" cy="13" r="1" fill="currentColor"/>
+          </svg>
           Equipos
         </button>
 
@@ -291,33 +301,33 @@ function renderAdminDashboard() {
             <h1 class="text-3xl font-bold text-slate-900">Equipos tecnicos</h1>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 pb-6">
             ${teamStats.map((team) => `
-              <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+              <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
                 <div class="flex items-center justify-between mb-3">
                   <h3 class="font-semibold text-slate-900">${team.teamName}</h3>
-                  <span class="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-600">${team.technicians.length} tecnicos</span>
+                  <span class="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-600" data-team-count="${team.teamKey}">${team.technicians.length}</span>
                 </div>
 
-                <p class="text-sm text-slate-500 mb-3">Incidencias asignadas: ${team.assignedCount} · Activas: ${team.activeCount}</p>
+                <p class="text-xs text-slate-500 mb-3">Incidencias: ${team.assignedCount} (${team.activeCount} activas)</p>
 
-                ${team.technicians.length === 0 ? `
-                  <p class="text-sm text-slate-400">No hay tecnicos en este equipo</p>
-                ` : `
-                  <div class="space-y-2">
+                <div id="team-${team.teamKey}" class="kanban-column tech-column space-y-3 min-h-[400px] bg-slate-50 rounded-xl p-2" data-team="${team.teamKey}">
+                  ${team.technicians.length === 0 ? `
+                    <div class="text-center text-xs text-slate-400 py-4">Sin tecnicos</div>
+                  ` : `
                     ${team.technicians.map((technician) => `
-                      <div class="flex items-center justify-between border border-slate-200 rounded-xl px-3 py-2">
-                        <div>
-                          <p class="text-sm font-medium text-slate-800">${technician.name}</p>
-                          <p class="text-xs text-slate-400">${technician.dni}</p>
+                      <div class="bg-white border-2 border-slate-200 rounded-xl p-3 cursor-move shadow-sm hover:shadow-md transition technician-card" draggable="true" data-dni="${technician.dni}" data-team="${team.teamKey}">
+                        <p class="font-semibold text-sm text-slate-800">${technician.name}</p>
+                        <p class="text-xs text-slate-500 mt-1">${technician.dni}</p>
+                        <div class="flex gap-2 mt-2">
+                          <button class="edit-user-btn text-xs px-2 py-1 rounded text-slate-500 hover:text-slate-700 hover:bg-slate-100" data-dni="${technician.dni}" title="Editar">
+                            <i data-lucide="pencil" style="width:12px;height:12px;display:inline;"></i>
+                          </button>
                         </div>
-                        <button class="edit-user-btn text-slate-500 hover:text-slate-700" data-dni="${technician.dni}" title="Editar tecnico">
-                          <i data-lucide="pencil" style="width:15px;height:15px;"></i>
-                        </button>
                       </div>
                     `).join('')}
-                  </div>
-                `}
+                  `}
+                </div>
               </div>
             `).join('')}
           </div>
@@ -378,6 +388,11 @@ function openTab(target, buttons, contents) {
     targetButton.classList.add('text-white', 'font-semibold', 'rounded-xl');
     targetButton.style.background = '#1468f5';
   }
+
+  // Attach drag-drop for equipment tab
+  if (target === 'equipos') {
+    setTimeout(() => attachTechnicianDragDrop(), 100);
+  }
 }
 
 async function deleteUser(dni) {
@@ -394,6 +409,90 @@ async function deleteUser(dni) {
   await loadUsers();
   activeTab = 'usuarios';
   renderAdminDashboard();
+}
+
+let draggedTechnicianDni = null;
+
+async function updateTechnicianTeam(dni, newTeam) {
+  const technician = users.find(u => u.dni === dni);
+  if (!technician) return;
+
+  const updatedData = {
+    dni: technician.dni,
+    name: technician.name,
+    email: technician.email,
+    role: technician.role,
+    technicalTeam: newTeam
+  };
+
+  const response = await fetch(`/api/users/${encodeURIComponent(dni)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify(updatedData)
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    alert(message || 'No se pudo actualizar el equipo del tecnico');
+    return false;
+  }
+
+  await loadUsers();
+  renderAdminDashboard();
+  return true;
+}
+
+function attachTechnicianDragDrop() {
+  const cards = document.querySelectorAll('.technician-card');
+  const columns = document.querySelectorAll('.kanban-column');
+
+  cards.forEach(card => {
+    card.addEventListener('dragstart', (event) => {
+      draggedTechnicianDni = card.dataset.dni;
+      card.classList.add('opacity-50');
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', draggedTechnicianDni);
+    });
+
+    card.addEventListener('dragend', () => {
+      card.classList.remove('opacity-50');
+    });
+  });
+
+  columns.forEach(column => {
+    column.addEventListener('dragover', (event) => {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+      column.classList.add('bg-blue-100', 'border-blue-300');
+    });
+
+    column.addEventListener('dragleave', () => {
+      column.classList.remove('bg-blue-100', 'border-blue-300');
+    });
+
+    column.addEventListener('drop', async (event) => {
+      event.preventDefault();
+      column.classList.remove('bg-blue-100', 'border-blue-300');
+
+      if (!draggedTechnicianDni) return;
+
+      const targetTeam = column.dataset.team;
+      const sourceTeam = document.querySelector(`.technician-card[data-dni="${draggedTechnicianDni}"]`)?.dataset.team;
+
+      if (sourceTeam !== targetTeam) {
+        const technician = users.find(u => u.dni === draggedTechnicianDni);
+        if (technician) {
+          const targetTeamName = Object.values(teamLabelMap)[Object.keys(teamLabelMap).indexOf(targetTeam)] || targetTeam;
+          const confirmed = confirm(`¿Mover ${technician.name} a equipo ${targetTeamName}?`);
+          if (confirmed) {
+            await updateTechnicianTeam(draggedTechnicianDni, targetTeam);
+          }
+        }
+      }
+      draggedTechnicianDni = null;
+    });
+  });
 }
 
 function attachAdminEvents() {
@@ -447,6 +546,11 @@ function attachAdminEvents() {
       await deleteUser(btn.dataset.dni);
     });
   });
+
+  // Attach drag-drop events if on equipos tab or when it becomes visible
+  if (activeTab === 'equipos' || document.querySelector('#equipos:not(.hidden)')) {
+    attachTechnicianDragDrop();
+  }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
