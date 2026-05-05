@@ -674,6 +674,13 @@ function attachHeaderActions() {
     });
   }
 
+  const editProfileBtn = document.getElementById("edit-profile-btn");
+  if (editProfileBtn) {
+    editProfileBtn.addEventListener("click", () => {
+      window.location.href = `/admin-user-edit?dni=${encodeURIComponent(currentUser.dni)}`;
+    });
+  }
+
   if (logoutBtn) {
     logoutBtn.addEventListener("click", async () => {
       await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });

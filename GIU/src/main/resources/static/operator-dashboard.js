@@ -206,6 +206,7 @@ function renderOperatorDashboard() {
 
         <div class="flex items-center gap-3 text-sm text-slate-600">
           <button id="switch-user-mode-btn" class="px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50">Modo ciudadano</button>
+          <button id="edit-profile-btn" class="px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50">Editar datos</button>
           <span>${currentUser?.name || 'Operario'}</span>
           <span class="px-2 py-1 rounded-full bg-sky-100 text-sky-700 font-medium">Operario</span>
           <button id="logout-btn" class="ml-2 text-slate-500 hover:text-slate-700">
@@ -348,6 +349,13 @@ function attachEvents() {
     localStorage.setItem('activeRole', 'user');
     window.location.href = '/dashboard';
   });
+
+  const editProfileBtn = document.getElementById('edit-profile-btn');
+  if (editProfileBtn) {
+    editProfileBtn.addEventListener('click', () => {
+      window.location.href = `/admin-user-edit?dni=${encodeURIComponent(currentUser.dni)}`;
+    });
+  }
 
   viewButtons.forEach((button) => {
     button.addEventListener('click', () => {

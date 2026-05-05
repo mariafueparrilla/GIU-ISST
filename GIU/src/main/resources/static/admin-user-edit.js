@@ -80,13 +80,14 @@ function renderEditPage() {
               <div>
                 <label class="block text-sm font-semibold text-slate-700 mb-2">DNI</label>
                 <input
+                  id="dni"
                   type="text"
                   value="${targetUser.dni}"
-                  disabled
-                  class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-slate-100 text-sm text-slate-500"
+                  required
+                  class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-surface-50 text-sm text-slate-700"
+                  placeholder="87654321B"
                 >
               </div>
-
               <div>
                 <label class="block text-sm font-semibold text-slate-700 mb-2">Nombre</label>
                 <input
@@ -198,13 +199,19 @@ function attachEvents() {
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
 
+    const newDni = document.getElementById('dni').value.trim().toUpperCase();
     const name = document.getElementById('name').value.trim();
     const email = document.getElementById('email').value.trim();
     const role = document.getElementById('role').value;
     const technicalTeam = technicalTeamSelect.value;
 
-    if (!name || !email) {
-      alert('Nombre y email son obligatorios');
+    if (!newDni || !name || !email) {
+      alert('DNI, nombre y email son obligatorios');
+      return;
+    }
+
+    if (!/^[0-9]{8}[A-Z]$/.test(newDni)) {
+      alert('Formato de DNI invalido. Debe ser 8 digitos y una letra mayuscula.');
       return;
     }
 
@@ -217,6 +224,7 @@ function attachEvents() {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        dni: newDni,
         name,
         email,
         role,
@@ -236,11 +244,6 @@ function attachEvents() {
 document.addEventListener('DOMContentLoaded', async () => {
   try {
     await loadSessionUser();
-    if (currentUser.role !== 'admin') {
-      window.location.href = '/login';
-      return;
-    }
-
     await loadTargetUser();
     renderEditPage();
   } catch (error) {

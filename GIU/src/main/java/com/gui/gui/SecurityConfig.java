@@ -56,8 +56,12 @@ public class SecurityConfig {
                 .requestMatchers("/dashboard", "/dashboard.html", "/new-incident", "/new-incident.html").authenticated()
                 .requestMatchers("/technician-profile", "/technician-profile.html").authenticated()
                 .requestMatchers("/operator-dashboard", "/operator-dashboard.html").authenticated()
-                // API de usuarios solo para admin.
-                .requestMatchers("/api/users/**").hasRole("ADMIN")
+                // API de usuarios: listado, creacion y eliminacion solo admin; consulta y actualizacion propia autenticada.
+                .requestMatchers(HttpMethod.GET, "/api/users").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/users").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/users/*").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/users/*").authenticated()
+                .requestMatchers(HttpMethod.PUT, "/api/users/*").authenticated()
                 // API de incidencias de administracion.
                 .requestMatchers(HttpMethod.GET, "/api/incidents").hasAnyRole("ADMIN", "OPERATOR")
                 .requestMatchers(HttpMethod.PATCH, "/api/incidents/*/state").hasRole("OPERATOR")

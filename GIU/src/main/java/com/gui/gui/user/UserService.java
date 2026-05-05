@@ -1,6 +1,8 @@
 package com.gui.gui.user;
 
 import com.gui.gui.incident.IncidentCategory;
+import com.gui.gui.incident.IncidentReportRepository;
+import com.gui.gui.incident.IncidentRepository;
 import com.gui.gui.user.dto.LoginRequest;
 import com.gui.gui.user.dto.LoginResponse;
 import com.gui.gui.user.dto.UserCreateRequest;
@@ -14,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.lang.NonNull;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
@@ -26,11 +29,19 @@ public class UserService {
     /** Acceso persistente a la tabla de usuarios. */
     private final UserRepository userRepository;
 
+    /** Repositorio de incidencias para actualizar referencias a usuarios cuando cambia el DNI. */
+    private final IncidentRepository incidentRepository;
+
+    /** Repositorio de informes para actualizar referencias a usuarios cuando cambia el DNI. */
+    private final IncidentReportRepository incidentReportRepository;
+
     /** Encoder BCrypt para comparar y almacenar passwords de forma segura. */
     private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository, IncidentRepository incidentRepository, IncidentReportRepository incidentReportRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.incidentRepository = incidentRepository;
+        this.incidentReportRepository = incidentReportRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -104,12 +115,16 @@ public class UserService {
     /**
      * Recupera un usuario por DNI.
      */
-    public UserResponse getUserByDni(String dni) {
+    public UserResponse getUserByDni(String dni, String requesterDni, boolean requesterIsAdmin) {
         if (isBlank(dni)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "dni es obligatorio");
         }
 
         String normalizedDni = dni.trim().toUpperCase(Locale.ROOT);
+        if (!requesterIsAdmin && !normalizedDni.equals(normalizeDni(requesterDni))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No autorizado para ver este usuario");
+        }
+
         UserEntity user = userRepository.findById(requireNonNull(normalizedDni))
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
 
@@ -119,23 +134,69 @@ public class UserService {
     /**
      * Actualiza nombre, email y rol de un usuario existente.
      */
-    public UserResponse updateUser(String dni, UserUpdateRequest request) {
-        if (isBlank(dni) || request == null || isBlank(request.name()) || isBlank(request.email()) || isBlank(request.role())) {
+    @Transactional
+    public UserResponse updateUser(String dni, UserUpdateRequest request, String requesterDni, boolean requesterIsAdmin) {
+        if (isBlank(dni) || request == null || isBlank(request.dni()) || isBlank(request.name()) || isBlank(request.email()) || isBlank(request.role())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "dni, name, email y role son obligatorios");
         }
 
         String normalizedDni = dni.trim().toUpperCase(Locale.ROOT);
+        String normalizedRequesterDni = normalizeDni(requesterDni);
+        if (!requesterIsAdmin && !normalizedDni.equals(normalizedRequesterDni)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No autorizado para actualizar este usuario");
+        }
+
         UserEntity user = userRepository.findById(requireNonNull(normalizedDni))
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
 
+        String normalizedNewDni = request.dni().trim().toUpperCase(Locale.ROOT);
+        if (!normalizedNewDni.matches("^\\d{8}[A-Z]$")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Formato de DNI invalido");
+        }
+
         validateEmail(request.email());
+        UserRole role = parseRole(request.role());
+
+        if (!normalizedNewDni.equals(normalizedDni)) {
+            if (userRepository.existsById(requireNonNull(normalizedNewDni))) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe un usuario con ese DNI");
+            }
+
+            if (!requesterIsAdmin && !normalizedDni.equals(normalizedRequesterDni)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No autorizado para cambiar el DNI de este usuario");
+            }
+
+            UserEntity newUser = new UserEntity();
+            newUser.setDni(normalizedNewDni);
+            newUser.setName(request.name().trim());
+            newUser.setEmail(request.email().trim().toLowerCase(Locale.ROOT));
+            newUser.setPassword(user.getPassword());
+            newUser.setRole(role);
+            newUser.setTechnicalTeam(resolveTechnicalTeam(role, request.technicalTeam()));
+
+            userRepository.save(newUser);
+            incidentRepository.updateCreatorDni(normalizedDni, normalizedNewDni);
+            incidentRepository.updateAssignerDni(normalizedDni, normalizedNewDni);
+            incidentRepository.updateResolverDni(normalizedDni, normalizedNewDni);
+            incidentRepository.updateCloserDni(normalizedDni, normalizedNewDni);
+            incidentRepository.updateRejecterDni(normalizedDni, normalizedNewDni);
+            incidentRepository.updateOperatorReviewerDni(normalizedDni, normalizedNewDni);
+            incidentReportRepository.updateSenderDni(normalizedDni, normalizedNewDni);
+            userRepository.deleteById(normalizedDni);
+
+            return toResponse(newUser);
+        }
+
         user.setName(request.name().trim());
         user.setEmail(request.email().trim().toLowerCase(Locale.ROOT));
-        UserRole role = parseRole(request.role());
         user.setRole(role);
         user.setTechnicalTeam(resolveTechnicalTeam(role, request.technicalTeam()));
 
         return toResponse(userRepository.save(user));
+    }
+
+    private String normalizeDni(String dni) {
+        return dni == null ? "" : dni.trim().toUpperCase(Locale.ROOT);
     }
 
     /**

@@ -43,8 +43,11 @@ public class UserController {
      * Recupera un usuario por DNI para la pantalla de edicion.
      */
     @GetMapping("/{dni}")
-    public UserResponse getUserByDni(@PathVariable String dni) {
-        return userService.getUserByDni(dni);
+    public UserResponse getUserByDni(@PathVariable String dni, Authentication authentication) {
+        String requesterDni = authentication == null ? null : authentication.getName();
+        boolean requesterIsAdmin = authentication != null && authentication.getAuthorities().stream()
+            .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
+        return userService.getUserByDni(dni, requesterDni, requesterIsAdmin);
     }
 
     /**
@@ -60,8 +63,11 @@ public class UserController {
      * Actualiza nombre/email/rol de un usuario existente.
      */
     @PutMapping("/{dni}")
-    public UserResponse updateUser(@PathVariable String dni, @RequestBody UserUpdateRequest request) {
-        return userService.updateUser(dni, request);
+    public UserResponse updateUser(@PathVariable String dni, @RequestBody UserUpdateRequest request, Authentication authentication) {
+        String requesterDni = authentication == null ? null : authentication.getName();
+        boolean requesterIsAdmin = authentication != null && authentication.getAuthorities().stream()
+            .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
+        return userService.updateUser(dni, request, requesterDni, requesterIsAdmin);
     }
 
     /**

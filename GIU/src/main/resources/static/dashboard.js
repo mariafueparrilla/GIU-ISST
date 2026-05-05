@@ -112,6 +112,9 @@ function renderHeader() {
           <span>${currentUser?.name || "Usuario"}</span>
         </div>
         
+        <button id="edit-profile-btn" class="text-slate-500 hover:text-slate-700 ml-2" title="Editar datos">
+          <i data-lucide="edit-2" style="width:18px;height:18px;"></i>
+        </button>
         <button id="logout-btn" class="text-slate-500 hover:text-slate-700 ml-2" title="Cerrar sesión">
           <i data-lucide="log-out" style="width:18px;height:18px;"></i>
         </button>
@@ -254,6 +257,13 @@ function attachDashboardEvents() {
       "click",
       () => (window.location.href = "/new-incident"),
     );
+  }
+
+  const editProfileBtn = document.getElementById('edit-profile-btn');
+  if (editProfileBtn) {
+    editProfileBtn.addEventListener('click', () => {
+      window.location.href = `/admin-user-edit?dni=${encodeURIComponent(currentUser.dni)}`;
+    });
   }
 
   if (newIncidentMainBtn) {
