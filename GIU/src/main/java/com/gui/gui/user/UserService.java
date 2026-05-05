@@ -1,5 +1,17 @@
 package com.gui.gui.user;
 
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.lang.NonNull;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
 import com.gui.gui.incident.IncidentCategory;
 import com.gui.gui.incident.IncidentReportRepository;
 import com.gui.gui.incident.IncidentRepository;
@@ -8,16 +20,6 @@ import com.gui.gui.user.dto.LoginResponse;
 import com.gui.gui.user.dto.UserCreateRequest;
 import com.gui.gui.user.dto.UserResponse;
 import com.gui.gui.user.dto.UserUpdateRequest;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
-import org.springframework.http.HttpStatus;
-import org.springframework.lang.NonNull;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Servicio de dominio para usuarios.
