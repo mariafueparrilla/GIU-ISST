@@ -37,72 +37,77 @@ public class UserDataInitializer {
     @Bean
     public CommandLineRunner seedUsers(UserRepository userRepository, IncidentRepository incidentRepository, PasswordEncoder passwordEncoder) {
         return args -> {
-            // Semilla base solo para BDs vacias.
-            if (userRepository.count() == 0) {
-                UserEntity admin = new UserEntity();
-                admin.setDni("12345678A");
-                admin.setName("Noelia");
-                admin.setSurname("García");
-                admin.setEmail("noelia@urfix.com");
-                admin.setPassword(passwordEncoder.encode("admin123"));
-                admin.setRole(UserRole.ADMIN);
+            // Clean DB and reseed with valid Spanish DNIs for development/testing.
+            // WARNING: This will delete all users and incidents on startup.
+            incidentRepository.deleteAll();
+            userRepository.deleteAll();
 
-                UserEntity user = new UserEntity();
-                user.setDni("87654321B");
-                user.setName("Maria");
-                user.setSurname("López");
-                user.setEmail("maria@urfix.com");
-                user.setPassword(passwordEncoder.encode("user123"));
-                user.setRole(UserRole.USER);
+            // Helper to compute control letter for numeric DNI
+            final String DNI_CONTROL_LETTERS = "TRWAGMYFPDXBNJZSQVHLCKE";
+            java.util.function.IntFunction<String> buildDni = number -> {
+                int n = number;
+                String num = String.format("%08d", n);
+                char letter = DNI_CONTROL_LETTERS.charAt(n % 23);
+                return num + letter;
+            };
 
-                UserEntity technician = new UserEntity();
-                technician.setDni("11223344T");
-                technician.setName("Carlos");
-                technician.setSurname("Rodríguez");
-                technician.setEmail("carlos@urfix.com");
-                technician.setPassword(passwordEncoder.encode("tech123"));
-                technician.setRole(UserRole.TECHNICIAN);
-                technician.setTechnicalTeam(IncidentCategory.ALUMBRADO);
+            // Seed primary users
+            UserEntity admin = new UserEntity();
+            admin.setDni(buildDni.apply(12345678));
+            admin.setName("Noelia");
+            admin.setSurname("García");
+            admin.setEmail("noelia@urfix.com");
+            admin.setPassword(passwordEncoder.encode("admin123"));
+            admin.setRole(UserRole.ADMIN);
 
-                userRepository.save(admin);
-                userRepository.save(user);
-                userRepository.save(technician);
-            }
+            UserEntity user = new UserEntity();
+            user.setDni(buildDni.apply(87654321));
+            user.setName("Maria");
+            user.setSurname("López");
+            user.setEmail("maria@urfix.com");
+            user.setPassword(passwordEncoder.encode("user123"));
+            user.setRole(UserRole.USER);
 
-            // Cuentas de prueba solicitadas: crear solo si no existen.
-            if (!userRepository.existsById("00000000T")) {
-                UserEntity testTechnician = new UserEntity();
-                testTechnician.setDni("00000000T");
-                testTechnician.setName("Tecnico");
-                testTechnician.setSurname("Prueba");
-                testTechnician.setEmail("tecnico.prueba@urfix.com");
-                testTechnician.setPassword(passwordEncoder.encode("tec"));
-                testTechnician.setRole(UserRole.TECHNICIAN);
-                testTechnician.setTechnicalTeam(IncidentCategory.ALUMBRADO);
-                userRepository.save(testTechnician);
-            }
+            UserEntity technician = new UserEntity();
+            technician.setDni(buildDni.apply(11223344));
+            technician.setName("Carlos");
+            technician.setSurname("Rodríguez");
+            technician.setEmail("carlos@urfix.com");
+            technician.setPassword(passwordEncoder.encode("tech123"));
+            technician.setRole(UserRole.TECHNICIAN);
+            technician.setTechnicalTeam(IncidentCategory.ALUMBRADO);
 
-            if (!userRepository.existsById("00000000O")) {
-                UserEntity testOperator = new UserEntity();
-                testOperator.setDni("00000000O");
-                testOperator.setName("Operario");
-                testOperator.setSurname("Prueba");
-                testOperator.setEmail("operario.prueba@urfix.com");
-                testOperator.setPassword(passwordEncoder.encode("ope"));
-                testOperator.setRole(UserRole.OPERATOR);
-                testOperator.setTechnicalTeam(null);
-                userRepository.save(testOperator);
-            }
+            userRepository.save(admin);
+            userRepository.save(user);
+            userRepository.save(technician);
 
-            // Limpiar incidencias en cada arranque para dejar un tablero de pruebas predecible.
-            if (incidentRepository.count() == 0) {
-                seedIncidents(incidentRepository, userRepository);
-            }
+            // Test accounts
+            UserEntity testTechnician = new UserEntity();
+            testTechnician.setDni(buildDni.apply(0));
+            testTechnician.setName("Tecnico");
+            testTechnician.setSurname("Prueba");
+            testTechnician.setEmail("tecnico.prueba@urfix.com");
+            testTechnician.setPassword(passwordEncoder.encode("tec"));
+            testTechnician.setRole(UserRole.TECHNICIAN);
+            testTechnician.setTechnicalTeam(IncidentCategory.ALUMBRADO);
+            userRepository.save(testTechnician);
+
+            UserEntity testOperator = new UserEntity();
+            testOperator.setDni(buildDni.apply(1));
+            testOperator.setName("Operario");
+            testOperator.setSurname("Prueba");
+            testOperator.setEmail("operario.prueba@urfix.com");
+            testOperator.setPassword(passwordEncoder.encode("ope"));
+            testOperator.setRole(UserRole.OPERATOR);
+            testOperator.setTechnicalTeam(null);
+            userRepository.save(testOperator);
+
+            // Seed incidents for the primary user (Maria)
+            seedIncidents(incidentRepository, userRepository, user);
         };
     }
 
-    private void seedIncidents(IncidentRepository incidentRepository, UserRepository userRepository) {
-        UserEntity user = userRepository.findById("87654321B").orElseThrow();
+    private void seedIncidents(IncidentRepository incidentRepository, UserRepository userRepository, UserEntity user) {
 
         incidentRepository.saveAll(List.of(
             createIncident(

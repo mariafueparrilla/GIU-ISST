@@ -112,8 +112,9 @@ function renderHeader() {
           <span>${currentUser?.name || "Usuario"}</span>
         </div>
         
-        <button id="edit-profile-btn" class="text-slate-500 hover:text-slate-700 ml-2" title="Editar datos">
-          <i data-lucide="edit-2" style="width:18px;height:18px;"></i>
+        <button id="edit-profile-btn" class="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition font-medium ml-2" title="Editar datos">
+          <i data-lucide="user-circle-2" style="width:16px;height:16px;"></i>
+          <span>Editar usuario</span>
         </button>
         <button id="logout-btn" class="text-slate-500 hover:text-slate-700 ml-2" title="Cerrar sesión">
           <i data-lucide="log-out" style="width:18px;height:18px;"></i>

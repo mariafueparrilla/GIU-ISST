@@ -52,8 +52,6 @@ function renderEditPage() {
     .map(team => `<option value="${team}" ${targetUser.technicalTeam === team ? 'selected' : ''}>${teamMap[team]}</option>`)
     .join('');
 
-  const showTeamField = targetUser.role === 'technician';
-
   app.innerHTML = `
     <div class="min-h-full bg-surface-50">
       <header class="w-full bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
@@ -139,8 +137,7 @@ function renderEditPage() {
                 </select>
               </div>
 
-              ${showTeamField ? `
-              <div>
+              <div id="technical-team-container" style="display: ${targetUser.role === 'technician' ? 'block' : 'none'};">
                 <label class="block text-sm font-semibold text-slate-700 mb-2">Equipo Técnico</label>
                 <select
                   id="technicalTeam"
@@ -150,7 +147,6 @@ function renderEditPage() {
                   ${teamOptions}
                 </select>
               </div>
-              ` : ''}
 
               <div class="flex gap-3 pt-2">
                 <button
@@ -186,6 +182,8 @@ function attachEvents() {
   const logoutBtn = document.getElementById('logout-btn');
   const form = document.getElementById('edit-user-form');
   const roleSelect = document.getElementById('role');
+  const technicalTeamContainer = document.getElementById('technical-team-container');
+  const technicalTeamSelect = document.getElementById('technicalTeam');
 
   const goBack = () => {
     window.location.href = '/admin-dashboard';
@@ -201,13 +199,19 @@ function attachEvents() {
   });
 
   roleSelect.addEventListener('change', () => {
-    const technicalTeamDiv = document.getElementById('technicalTeam')?.parentElement;
-    if (roleSelect.value === 'technician' && technicalTeamDiv) {
-      technicalTeamDiv.style.display = 'block';
-    } else if (technicalTeamDiv) {
-      technicalTeamDiv.style.display = 'none';
+    if (roleSelect.value === 'technician') {
+      technicalTeamContainer.style.display = 'block';
+      technicalTeamSelect.required = true;
+    } else {
+      technicalTeamContainer.style.display = 'none';
+      technicalTeamSelect.required = false;
+      technicalTeamSelect.value = '';
     }
   });
+
+  if (roleSelect.value === 'technician') {
+    technicalTeamSelect.required = true;
+  }
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -221,6 +225,11 @@ function attachEvents() {
 
     if (!name || !email || !newDni || !role) {
       alert('Nombre, email, DNI y rol son obligatorios');
+      return;
+    }
+
+    if (role === 'technician' && !technicalTeam) {
+      alert('Debes seleccionar un equipo técnico para el rol técnico');
       return;
     }
 

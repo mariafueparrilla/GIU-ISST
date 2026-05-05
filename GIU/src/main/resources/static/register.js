@@ -17,6 +17,8 @@ const technicalTeams = [
   { value: 'otros', label: 'Otros' }
 ];
 
+const dniControlLetters = 'TRWAGMYFPDXBNJZSQVHLCKE';
+
 /**
  * Muestra una notificación flotante en pantalla.
  * @param {string} message - Texto del mensaje.
@@ -68,6 +70,15 @@ function generatePassword(length = 10) {
   }
 
   return password;
+}
+
+function isValidSpanishDni(dni) {
+  if (!/^\d{8}[A-Z]$/.test(dni)) {
+    return false;
+  }
+
+  const number = Number(dni.slice(0, 8));
+  return dni[8] === dniControlLetters[number % 23];
 }
 
 /**
@@ -244,9 +255,9 @@ function attachRegisterEvents() {
     const email = document.getElementById('reg-email').value.trim();
     const password = passwordInput.value.trim();
 
-    // Validación básica del DNI
-    if (!/^\d{8}[A-Z]$/.test(dni)) {
-      showToast('El DNI debe tener 8 números y una letra mayúscula', 'error');
+    // Validación del DNI español con letra de control
+    if (!isValidSpanishDni(dni)) {
+      showToast('El DNI no es válido', 'error');
       return;
     }
 
@@ -256,15 +267,14 @@ function attachRegisterEvents() {
       return;
     }
 
-    const mergedName = `${name} ${surname}`.trim();
-
     try {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           dni,
-          name: mergedName,
+          name,
+          surname,
           email,
           role: 'user',
           password,

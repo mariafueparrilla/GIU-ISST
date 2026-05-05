@@ -33,8 +33,28 @@ async function loadTargetUser() {
   targetUser = await response.json();
 }
 
+function resolveEditableNameParts(user) {
+  const name = (user?.name || '').trim();
+  const surname = (user?.surname || '').trim();
+
+  if (surname) {
+    return { name, surname };
+  }
+
+  if (!name.includes(' ')) {
+    return { name, surname: '' };
+  }
+
+  const parts = name.split(/\s+/).filter(Boolean);
+  return {
+    name: parts.slice(0, -1).join(' '),
+    surname: parts.at(-1) || ''
+  };
+}
+
 function renderEditPage() {
   const app = document.getElementById('app');
+  const editableNameParts = resolveEditableNameParts(targetUser);
 
   app.innerHTML = `
     <div class="min-h-full bg-surface-50">
@@ -83,7 +103,7 @@ function renderEditPage() {
                 <input
                   id="name"
                   type="text"
-                  value="${targetUser.name}"
+                  value="${editableNameParts.name}"
                   required
                   class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-surface-50 text-sm text-slate-700"
                 >
@@ -94,7 +114,7 @@ function renderEditPage() {
                 <input
                   id="surname"
                   type="text"
-                  value="${targetUser.surname || ''}"
+                  value="${editableNameParts.surname}"
                   class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-surface-50 text-sm text-slate-700"
                 >
               </div>

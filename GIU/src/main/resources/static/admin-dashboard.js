@@ -287,9 +287,11 @@ function renderAdminDashboard() {
                   <button class="edit-user-btn text-slate-400 hover:text-slate-600" data-dni="${user.dni}" title="Editar">
                     <i data-lucide="pencil" style="width:16px;height:16px;"></i>
                   </button>
+                  ${currentUser?.dni !== user.dni ? `
                   <button class="delete-user-btn text-rose-400 hover:text-rose-600" data-dni="${user.dni}" title="Eliminar">
                     <i data-lucide="trash-2" style="width:16px;height:16px;"></i>
                   </button>
+                  ` : ''}
                 </div>
               </div>
             `).join('')}

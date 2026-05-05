@@ -8,6 +8,7 @@ import java.util.Objects;
 import org.springframework.http.HttpStatus;
 import org.springframework.lang.NonNull;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -29,6 +30,9 @@ import com.gui.gui.user.dto.UserUpdateRequest;
 @Service
 public class UserService {
 
+    /** Letras de control validas para un DNI espanol. */
+    private static final String DNI_CONTROL_LETTERS = "TRWAGMYFPDXBNJZSQVHLCKE";
+
     /** Acceso persistente a la tabla de usuarios. */
     private final UserRepository userRepository;
 
@@ -41,11 +45,15 @@ public class UserService {
     /** Encoder BCrypt para comparar y almacenar passwords de forma segura. */
     private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository, IncidentRepository incidentRepository, IncidentReportRepository incidentReportRepository, PasswordEncoder passwordEncoder) {
+    /** EntityManager used to flush native updates before delete. */
+    private final EntityManager entityManager;
+
+    public UserService(UserRepository userRepository, IncidentRepository incidentRepository, IncidentReportRepository incidentReportRepository, PasswordEncoder passwordEncoder, EntityManager entityManager) {
         this.userRepository = userRepository;
         this.incidentRepository = incidentRepository;
         this.incidentReportRepository = incidentReportRepository;
         this.passwordEncoder = passwordEncoder;
+        this.entityManager = entityManager;
     }
 
     /**
@@ -59,8 +67,8 @@ public class UserService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "DNI y password son obligatorios");
         }
 
-        // Normalizar DNI para comparacion consistente.
-        String normalizedDni = request.dni().trim().toUpperCase(Locale.ROOT);
+        // Normalizar y validar DNI para comparacion consistente.
+        String normalizedDni = normalizeAndValidateSpanishDni(request.dni());
 
         // Buscar usuario en BD.
         UserEntity user = userRepository.findById(requireNonNull(normalizedDni))
@@ -98,7 +106,7 @@ public class UserService {
     public UserResponse createUser(UserCreateRequest request) {
         validateCreateRequest(request);
 
-        String normalizedDni = request.dni().trim().toUpperCase(Locale.ROOT);
+        String normalizedDni = normalizeAndValidateSpanishDni(request.dni());
         if (userRepository.existsById(requireNonNull(normalizedDni))) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe un usuario con ese DNI");
         }
@@ -124,7 +132,7 @@ public class UserService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "dni es obligatorio");
         }
 
-        String normalizedDni = dni.trim().toUpperCase(Locale.ROOT);
+        String normalizedDni = normalizeAndValidateSpanishDni(dni);
         if (!requesterIsAdmin && !normalizedDni.equals(normalizeDni(requesterDni))) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No autorizado para ver este usuario");
         }
@@ -144,7 +152,7 @@ public class UserService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "name y email son obligatorios");
         }
 
-        String normalizedDni = dni.trim().toUpperCase(Locale.ROOT);
+        String normalizedDni = normalizeAndValidateSpanishDni(dni);
         String normalizedRequesterDni = normalizeDni(requesterDni);
         if (!requesterIsAdmin && !normalizedDni.equals(normalizedRequesterDni)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No autorizado para actualizar este usuario");
@@ -178,12 +186,8 @@ public class UserService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "name, email, newDni y role son obligatorios");
         }
 
-        String normalizedDni = dni.trim().toUpperCase(Locale.ROOT);
-        String normalizedNewDni = request.newDni().trim().toUpperCase(Locale.ROOT);
-
-        if (!normalizedNewDni.matches("^\\d{8}[A-Z]$")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Formato de DNI invalido");
-        }
+        String normalizedDni = normalizeAndValidateSpanishDni(dni);
+        String normalizedNewDni = normalizeAndValidateSpanishDni(request.newDni());
 
         validateEmail(request.email());
 
@@ -220,8 +224,33 @@ public class UserService {
     }
 
     /**
+     * Normaliza y valida un DNI espanol con letra de control.
+     */
+    private String normalizeAndValidateSpanishDni(String dni) {
+        String normalizedDni = normalizeDni(dni);
+        if (!isValidSpanishDni(normalizedDni)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Formato de DNI invalido");
+        }
+        return normalizedDni;
+    }
+
+    /**
+     * Verifica si un DNI espanol tiene 8 digitos y letra de control correcta.
+     */
+    private boolean isValidSpanishDni(String dni) {
+        if (isBlank(dni) || !dni.matches("^\\d{8}[A-Z]$")) {
+            return false;
+        }
+
+        int number = Integer.parseInt(dni.substring(0, 8));
+        char expectedLetter = DNI_CONTROL_LETTERS.charAt(number % 23);
+        return dni.charAt(8) == expectedLetter;
+    }
+
+    /**
      * Elimina usuario por DNI, impidiendo auto-eliminacion del admin logueado.
      */
+    @Transactional
     public void deleteUser(String dni, String requesterDni) {
         if (isBlank(dni)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "dni es obligatorio");
@@ -238,6 +267,25 @@ public class UserService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado");
         }
 
+        String reassignmentDni = normalizedRequester;
+
+        // Reassign all incident-related foreign key columns that may reference this user
+        incidentRepository.updateCreatorDni(normalizedDni, reassignmentDni);
+        incidentRepository.updateAssignerDni(normalizedDni, reassignmentDni);
+        incidentRepository.updateResolverDni(normalizedDni, reassignmentDni);
+        incidentRepository.updateCloserDni(normalizedDni, reassignmentDni);
+        incidentRepository.updateRejecterDni(normalizedDni, reassignmentDni);
+        incidentRepository.updateOperatorReviewerDni(normalizedDni, reassignmentDni);
+
+        // Reassign sender in incident reports
+        incidentReportRepository.updateSenderDni(normalizedDni, reassignmentDni);
+
+        // Ensure native UPDATE statements are flushed to the DB before attempting delete
+        if (this.entityManager != null) {
+            this.entityManager.flush();
+        }
+
+        // Finally remove the user
         userRepository.deleteById(requireNonNull(normalizedDni));
     }
 
@@ -270,10 +318,7 @@ public class UserService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "dni, name, email, password y role son obligatorios");
         }
 
-        String normalizedDni = request.dni().trim().toUpperCase(Locale.ROOT);
-        if (!normalizedDni.matches("^\\d{8}[A-Z]$")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Formato de DNI invalido");
-        }
+        normalizeAndValidateSpanishDni(request.dni());
 
         if (request.password().length() < 6) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La contraseña debe tener al menos 6 caracteres");
