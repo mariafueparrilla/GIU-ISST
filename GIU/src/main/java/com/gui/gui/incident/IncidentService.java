@@ -1,33 +1,34 @@
 package com.gui.gui.incident;
 
-import com.gui.gui.incident.dto.IncidentCreateRequest;
-import com.gui.gui.incident.dto.IncidentAssignmentRequest;
-import com.gui.gui.incident.dto.IncidentImageRequest;
-import com.gui.gui.incident.dto.IncidentOperatorValidationRequest;
-import com.gui.gui.incident.dto.IncidentLocationRequest;
-import com.gui.gui.incident.dto.IncidentLocationResponse;
-import com.gui.gui.incident.dto.IncidentReportRequest;
-import com.gui.gui.incident.dto.IncidentResolutionReviewRequest;
-import com.gui.gui.incident.dto.IncidentReportResponse;
-import com.gui.gui.incident.dto.IncidentResponse;
-import com.gui.gui.incident.dto.IncidentImageResponse;
-import com.gui.gui.incident.dto.IncidentPreviewResponse;
-import com.gui.gui.user.UserEntity;
-import com.gui.gui.user.UserRepository;
-import com.gui.gui.user.UserRole;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+
+import com.gui.gui.incident.dto.IncidentAssignmentRequest;
+import com.gui.gui.incident.dto.IncidentCreateRequest;
+import com.gui.gui.incident.dto.IncidentImageRequest;
+import com.gui.gui.incident.dto.IncidentImageResponse;
+import com.gui.gui.incident.dto.IncidentLocationRequest;
+import com.gui.gui.incident.dto.IncidentLocationResponse;
+import com.gui.gui.incident.dto.IncidentOperatorValidationRequest;
+import com.gui.gui.incident.dto.IncidentPreviewResponse;
+import com.gui.gui.incident.dto.IncidentReportRequest;
+import com.gui.gui.incident.dto.IncidentReportResponse;
+import com.gui.gui.incident.dto.IncidentResolutionReviewRequest;
+import com.gui.gui.incident.dto.IncidentResponse;
+import com.gui.gui.user.UserEntity;
+import com.gui.gui.user.UserRepository;
+import com.gui.gui.user.UserRole;
 
 /**
  * Servicio de dominio de incidencias.
@@ -582,6 +583,8 @@ public class IncidentService {
             incident.getState().name().toLowerCase(Locale.ROOT),
             incident.getAssignedTeam() == null ? null : incident.getAssignedTeam().name().toLowerCase(Locale.ROOT),
             incident.getCreationDate(),
+            incident.getResolutionDate(),
+            incident.getOperatorReviewDate(),
             incident.getCreator().getDni(),
             incident.getCreator().getName(),
             ubicacion.getMunicipio(),

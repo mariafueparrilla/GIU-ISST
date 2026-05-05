@@ -1,5 +1,6 @@
 package com.gui.gui.incident.dto;
 
+import java.time.Instant;
 import java.time.LocalDate;
 
 /**
@@ -31,6 +32,8 @@ public record IncidentPreviewResponse(
     String state,
     String assignedTeam,
     LocalDate creationDate,
+    Instant resolutionDate,
+    Instant operatorReviewDate,
     String creatorDni,
     String creatorName,
     String ubicacionMunicipio,
