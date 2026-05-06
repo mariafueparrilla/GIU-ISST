@@ -39,14 +39,11 @@ public class UserDataInitializer {
     @Bean
     public CommandLineRunner seedUsers(UserRepository userRepository, IncidentRepository incidentRepository, PasswordEncoder passwordEncoder) {
         return args -> {
-          incidentRepository.deleteAll(); // Limpia incidentes para evitar conflictos con usuarios semilla
-          userRepository.deleteAll(); // Limpia usuarios para evitar conflictos con usuarios semilla
             // Only seed if database is empty
-           /* 
             if (userRepository.count() > 0) {
                 return; // Database already has data, skip seeding
             }
-*/
+
             // Helper to compute control letter for numeric DNI
             final String DNI_CONTROL_LETTERS = "TRWAGMYFPDXBNJZSQVHLCKE";
             java.util.function.IntFunction<String> buildDni = number -> {
