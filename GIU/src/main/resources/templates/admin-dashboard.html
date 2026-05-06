@@ -18,6 +18,10 @@
     html, body { height: 100%; margin: 0; }
     input:focus, button:focus, select:focus { outline: none; }
     #admin-incidents-map { height: 360px; }
+    /* Ensure filter popovers appear above Leaflet map panes */
+    details .absolute { z-index: 11000 !important; }
+    /* Also make summary/popover containers positioned above the map */
+    .incident-filter-clear-btn, .incident-filter-menu-item, .general-filter-clear-btn { position: relative; z-index: 11001; }
   </style>
 
   <script>
