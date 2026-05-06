@@ -589,6 +589,8 @@ public class IncidentService {
             incident.getCloser() == null ? null : incident.getCloser().getDni(),
             incident.getCreator().getDni(),
             incident.getCreator().getName(),
+            ubicacion.getLatitud(),
+            ubicacion.getLongitud(),
             ubicacion.getMunicipio(),
             ubicacion.getCalle(),
             ubicacion.getNumero(),

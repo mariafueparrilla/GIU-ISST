@@ -46,6 +46,9 @@ let teamSearchQuery = "";
 let draggedIncidentId = null;
 let reportDraftIncidentId = null;
 let reportDraftImages = [];
+let activeTechView = "board";
+let technicianIncidentsMap = null;
+let technicianIncidentsMarkersLayer = null;
 
 async function loadSessionUser() {
   const response = await fetch("/api/auth/me", { credentials: "same-origin" });
@@ -75,6 +78,9 @@ async function loadIncidents() {
 function mapIncidentFromApi(apiIncident) {
   const uiStatus = BACKEND_TO_UI_STATE[apiIncident.state] || null;
   const location = apiIncident.ubicacion || {};
+  const municipality = apiIncident.ubicacionMunicipio || location.municipio || "";
+  const street = apiIncident.ubicacionCalle || location.calle || "";
+  const number = apiIncident.ubicacionNumero || location.numero || "";
 
   return {
     id: apiIncident.id,
@@ -87,7 +93,9 @@ function mapIncidentFromApi(apiIncident) {
     uiStatus,
     creationDate: apiIncident.creationDate,
     resolutionDate: apiIncident.resolutionDate,
-    address: `${location.municipio || ""}, ${location.calle || ""} ${location.numero || ""}`.trim()
+    ubicacionLatitud: apiIncident.ubicacionLatitud ?? location.latitud,
+    ubicacionLongitud: apiIncident.ubicacionLongitud ?? location.longitud,
+    address: `${municipality}, ${street} ${number}`.trim()
   };
 }
 
@@ -272,15 +280,13 @@ async function submitTechnicianReport() {
       const message = await resolveResponse.text();
       alert(message || "El informe se guardo, pero no se pudo marcar la incidencia como resuelta");
       await loadIncidents();
-      renderTechnicianProfileData();
-      renderTechnicianKanban();
+      refreshTechnicianViews();
       closeReportModal();
       return;
     }
 
     await loadIncidents();
-    renderTechnicianProfileData();
-    renderTechnicianKanban();
+    refreshTechnicianViews();
     closeReportModal();
   } catch (error) {
     console.error(error);
@@ -324,6 +330,151 @@ function getStatusClass(status) {
 function normalizeTeamLabel(teamValue) {
   if (!teamValue) return "Sin equipo";
   return TEAM_LABEL_MAP[teamValue] || teamValue;
+}
+
+function getIncidentCoordinates(incident) {
+  const latitude = Number(incident.ubicacionLatitud);
+  const longitude = Number(incident.ubicacionLongitud);
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    return null;
+  }
+
+  return [latitude, longitude];
+}
+
+function getTechnicianMapIncidents() {
+  return getTeamIncidents().filter((incident) => {
+    const isVisibleStatus = incident.uiStatus === "pending" || incident.uiStatus === "in_progress";
+    return isVisibleStatus && getIncidentCoordinates(incident);
+  });
+}
+
+function getTechnicianMapColor(status) {
+  if (status === "pending") return "#f59e0b";
+  if (status === "in_progress") return "#2563eb";
+  return "#64748b";
+}
+
+function getTechnicianMapPopup(incident) {
+  return `
+    <div style="min-width: 220px; font-family: DM Sans, sans-serif;">
+      <div style="font-weight: 700; margin-bottom: 4px;">${incident.title}</div>
+      <div style="font-size: 12px; color: #64748b; margin-bottom: 6px;">${getStatusLabel(incident.uiStatus)}</div>
+      <div style="font-size: 12px; color: #475569; margin-bottom: 4px;">${PRIORITY_LABEL_MAP[incident.priority] || incident.priority}</div>
+      <div style="font-size: 12px; color: #475569;">${incident.address}</div>
+    </div>
+  `;
+}
+
+function getTechnicianPinIcon(color) {
+  return L.divIcon({
+    className: '',
+    html: `
+      <div style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; transform: translate(-50%, -100%);">
+        <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true">
+          <path fill="${color}" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z"></path>
+        </svg>
+      </div>
+    `,
+    iconSize: [28, 28],
+    iconAnchor: [14, 28],
+    popupAnchor: [0, -26]
+  });
+}
+
+function renderTechnicianMapView() {
+  const mapElement = document.getElementById("technician-incidents-map");
+  const mapCountEl = document.getElementById("tech-map-count");
+
+  if (mapCountEl) {
+    mapCountEl.textContent = String(getTechnicianMapIncidents().length);
+  }
+
+  if (!mapElement || !window.L || activeTechView !== "map") {
+    return;
+  }
+
+  const visibleIncidents = getTechnicianMapIncidents();
+  const madridCenter = [40.4168, -3.7038];
+
+  if (!technicianIncidentsMap) {
+    technicianIncidentsMap = L.map(mapElement, { scrollWheelZoom: false }).setView(madridCenter, 10);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "© OpenStreetMap contributors"
+    }).addTo(technicianIncidentsMap);
+    technicianIncidentsMarkersLayer = L.layerGroup().addTo(technicianIncidentsMap);
+  }
+
+  if (technicianIncidentsMarkersLayer) {
+    technicianIncidentsMarkersLayer.clearLayers();
+  }
+
+  const bounds = [];
+  visibleIncidents.forEach((incident) => {
+    const coordinates = getIncidentCoordinates(incident);
+    if (!coordinates) return;
+
+    const color = getTechnicianMapColor(incident.uiStatus);
+    const marker = L.marker(coordinates, {
+      icon: getTechnicianPinIcon(color)
+    });
+
+    marker.bindPopup(getTechnicianMapPopup(incident));
+    marker.on("click", () => {
+      window.location.href = `/incident-detail?id=${incident.id}`;
+    });
+    marker.addTo(technicianIncidentsMarkersLayer);
+    bounds.push(coordinates);
+  });
+
+  if (bounds.length > 0) {
+    technicianIncidentsMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 12 });
+  } else {
+    technicianIncidentsMap.setView(madridCenter, 10);
+  }
+
+  setTimeout(() => technicianIncidentsMap?.invalidateSize(), 0);
+}
+
+function setTechnicianView(view) {
+  activeTechView = view;
+
+  const boardView = document.getElementById("tech-board-view");
+  const mapView = document.getElementById("tech-map-view");
+  const boardButton = document.getElementById("tech-view-board-btn");
+  const mapButton = document.getElementById("tech-view-map-btn");
+
+  if (boardView) {
+    boardView.classList.toggle("hidden", view !== "board");
+  }
+  if (mapView) {
+    mapView.classList.toggle("hidden", view !== "map");
+  }
+
+  if (boardButton) {
+    boardButton.className = view === "board"
+      ? "px-4 py-2 rounded-xl bg-blue-500 text-white font-semibold shadow"
+      : "px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-700 font-semibold hover:bg-slate-50";
+  }
+
+  if (mapButton) {
+    mapButton.className = view === "map"
+      ? "px-4 py-2 rounded-xl bg-blue-500 text-white font-semibold shadow"
+      : "px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-700 font-semibold hover:bg-slate-50";
+  }
+
+  if (view === "map") {
+    renderTechnicianMapView();
+  }
+}
+
+function refreshTechnicianViews() {
+  renderTechnicianProfileData();
+  renderTechnicianKanban();
+  if (activeTechView === "map") {
+    renderTechnicianMapView();
+  }
 }
 
 function renderTechnicianProfileData() {
@@ -590,8 +741,7 @@ async function updateTechnicianIncidentStatus(incidentId, newUiStatus) {
   }
 
   await loadIncidents();
-  renderTechnicianProfileData();
-  renderTechnicianKanban();
+  refreshTechnicianViews();
 }
 
 function attachCardButtons() {
@@ -663,6 +813,19 @@ function attachTechnicianFilters() {
   }
 }
 
+function attachTechnicianViewActions() {
+  const boardButton = document.getElementById("tech-view-board-btn");
+  const mapButton = document.getElementById("tech-view-map-btn");
+
+  if (boardButton) {
+    boardButton.addEventListener("click", () => setTechnicianView("board"));
+  }
+
+  if (mapButton) {
+    mapButton.addEventListener("click", () => setTechnicianView("map"));
+  }
+}
+
 function attachHeaderActions() {
   const switchUserModeBtn = document.getElementById("switch-user-mode-btn");
   const logoutBtn = document.getElementById("logout-btn");
@@ -698,6 +861,7 @@ async function initTechnicianProfile() {
     renderTechnicianProfileData();
     renderTechnicianKanban();
     attachTechnicianFilters();
+    attachTechnicianViewActions();
     attachHeaderActions();
     attachReportModalActions();
   } catch (error) {

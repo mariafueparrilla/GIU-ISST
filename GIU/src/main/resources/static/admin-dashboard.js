@@ -51,6 +51,114 @@ const teamLabelMap = {
 
 const allTeams = Object.keys(teamLabelMap);
 
+let adminIncidentsMap = null;
+let adminIncidentsMarkersLayer = null;
+
+function normalizeStateKey(value) {
+  return (value || '').toLowerCase();
+}
+
+function getIncidentCoordinates(incident) {
+  const latitude = Number(incident.ubicacionLatitud);
+  const longitude = Number(incident.ubicacionLongitud);
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    return null;
+  }
+
+  return [latitude, longitude];
+}
+
+function getIncidentMapColor(state) {
+  const normalizedState = normalizeStateKey(state);
+  if (normalizedState === 'creada') return '#f59e0b';
+  if (normalizedState === 'asignada') return '#0f766e';
+  if (normalizedState === 'en_curso') return '#2563eb';
+  if (normalizedState === 'resuelta') return '#10b981';
+  return '#64748b';
+}
+
+function getIncidentMapPopup(incident) {
+  const stateLabel = stateLabelMap[incident.state] || incident.state;
+  const teamLabel = incident.assignedTeam ? (teamLabelMap[incident.assignedTeam] || incident.assignedTeam) : 'Sin equipo';
+
+  return `
+    <div style="min-width: 220px; font-family: DM Sans, sans-serif;">
+      <div style="font-weight: 700; margin-bottom: 4px;">${incident.title}</div>
+      <div style="font-size: 12px; color: #64748b; margin-bottom: 6px;">${stateLabel}</div>
+      <div style="font-size: 12px; color: #475569; margin-bottom: 4px;">Equipo: ${teamLabel}</div>
+      <div style="font-size: 12px; color: #475569;">${incident.ubicacionMunicipio || ''} ${incident.ubicacionCalle || ''} ${incident.ubicacionNumero || ''}</div>
+    </div>
+  `;
+}
+
+function getIncidentPinIcon(color) {
+  return L.divIcon({
+    className: '',
+    html: `
+      <div style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; transform: translate(-50%, -100%);">
+        <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true">
+          <path fill="${color}" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z"></path>
+        </svg>
+      </div>
+    `,
+    iconSize: [28, 28],
+    iconAnchor: [14, 28],
+    popupAnchor: [0, -26]
+  });
+}
+
+function renderAdminIncidentsMap(incidentList = getFilteredIncidents()) {
+  const mapElement = document.getElementById('admin-incidents-map');
+  if (!mapElement || !window.L) {
+    return;
+  }
+
+  const visibleIncidents = incidentList.filter((incident) => {
+    const state = normalizeStateKey(incident.state);
+    return state !== 'rechazada' && state !== 'cerrada' && getIncidentCoordinates(incident);
+  });
+  const madridCenter = [40.4168, -3.7038];
+
+  if (!adminIncidentsMap) {
+    adminIncidentsMap = L.map(mapElement, { scrollWheelZoom: false }).setView(madridCenter, 11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(adminIncidentsMap);
+    adminIncidentsMarkersLayer = L.layerGroup().addTo(adminIncidentsMap);
+  }
+
+  if (adminIncidentsMarkersLayer) {
+    adminIncidentsMarkersLayer.clearLayers();
+  }
+
+  const bounds = [];
+  visibleIncidents.forEach((incident) => {
+    const coordinates = getIncidentCoordinates(incident);
+    if (!coordinates) return;
+
+    const color = getIncidentMapColor(incident.state);
+    const marker = L.marker(coordinates, {
+      icon: getIncidentPinIcon(color)
+    });
+
+    marker.bindPopup(getIncidentMapPopup(incident));
+    marker.on('click', () => {
+      window.location.href = `/incident-detail?id=${incident.id}`;
+    });
+    marker.addTo(adminIncidentsMarkersLayer);
+    bounds.push(coordinates);
+  });
+
+  if (bounds.length > 0) {
+    adminIncidentsMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 13 });
+  } else {
+    adminIncidentsMap.setView(madridCenter, 11);
+  }
+
+  setTimeout(() => adminIncidentsMap?.invalidateSize(), 0);
+}
+
 function getUserRoleStats(userList) {
   return {
     admin: userList.filter(u => u.role === 'admin').length,
@@ -311,6 +419,19 @@ function renderIncidenciasSection() {
       </div>
     </div>
 
+    <div class="mb-6 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm max-w-4xl mx-auto">
+      <div class="flex items-center justify-between gap-3 mb-4 flex-wrap">
+        <div>
+          <h2 class="text-lg font-bold text-slate-900">Mapa de incidencias activas</h2>
+          <p class="text-sm text-slate-500">Se muestran las incidencias visibles tras aplicar los filtros.</p>
+        </div>
+        <div class="text-sm text-slate-500">
+          <span class="font-semibold text-slate-900">${filteredIncidents.filter((incident) => normalizeStateKey(incident.state) !== 'rechazada' && normalizeStateKey(incident.state) !== 'cerrada' && getIncidentCoordinates(incident)).length}</span> incidencias visibles
+        </div>
+      </div>
+      <div id="admin-incidents-map" class="rounded-2xl border border-slate-200"></div>
+    </div>
+
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       ${filteredIncidents.map((incident) => `
         <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition cursor-pointer incident-card" data-incident-id="${incident.id}">
@@ -366,6 +487,12 @@ function renderAdminDashboard() {
   const incidentStats = getIncidentStats(incidents);
   const incidentKpis = getIncidentKpis(incidents);
   const teamStats = getTechnicalTeamStats(users, incidents);
+
+  if (adminIncidentsMap) {
+    adminIncidentsMap.remove();
+    adminIncidentsMap = null;
+    adminIncidentsMarkersLayer = null;
+  }
 
   app.innerHTML = `
     <div class="min-h-full bg-surface-50">
@@ -581,6 +708,10 @@ function renderAdminDashboard() {
   lucide.createIcons();
   attachAdminEvents();
 
+  if (activeTab === 'incidencias') {
+    setTimeout(() => renderAdminIncidentsMap(getFilteredIncidents()), 0);
+  }
+
   if (activeTab !== 'incidencias') {
     const activeButton = document.querySelector(`.tab-btn[data-tab="${activeTab}"]`);
     if (activeButton) {
@@ -605,6 +736,10 @@ function openTab(target, buttons, contents) {
     targetButton.classList.remove('text-slate-600');
     targetButton.classList.add('text-white', 'font-semibold', 'rounded-xl');
     targetButton.style.background = '#1468f5';
+  }
+
+  if (target === 'incidencias') {
+    setTimeout(() => renderAdminIncidentsMap(getFilteredIncidents()), 0);
   }
 
   // Attach drag-drop for equipment tab

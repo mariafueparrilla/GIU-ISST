@@ -10,6 +10,12 @@
 
   <!-- Iconos -->
   <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
+
+  <style>
+    #technician-incidents-map { height: 520px; }
+  </style>
 
 </head>
 
@@ -65,8 +71,15 @@
 
     </div>
 
-    <!-- FILTROS -->
-    <div class="bg-white rounded-2xl p-4 shadow mb-6 flex flex-col md:flex-row gap-3">
+    <div class="mb-6 flex items-center gap-3">
+      <button id="tech-view-board-btn" class="px-4 py-2 rounded-xl bg-blue-500 text-white font-semibold shadow">Tablero</button>
+      <button id="tech-view-map-btn" class="px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-700 font-semibold hover:bg-slate-50">Mapa</button>
+    </div>
+
+    <section id="tech-board-view">
+
+      <!-- FILTROS -->
+      <div class="bg-white rounded-2xl p-4 shadow mb-6 flex flex-col md:flex-row gap-3">
 
       <!-- BUSCADOR -->
       <input 
@@ -87,10 +100,10 @@
         <option value="resolved">Resuelta</option>
       </select>
 
-    </div>
+      </div>
 
-    <!-- TABLERO KANBAN -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <!-- TABLERO KANBAN -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 
       <!-- PENDIENTE -->
       <div class="bg-white rounded-2xl p-4 shadow">
@@ -110,7 +123,23 @@
         <div id="resolved" class="kanban-column space-y-3 min-h-[300px]"></div>
       </div>
 
-    </div>
+      </div>
+    </section>
+
+    <section id="tech-map-view" class="hidden mb-6">
+      <div class="bg-white rounded-2xl p-4 shadow mb-4">
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h2 class="text-xl font-bold text-slate-900">Mapa de incidencias del equipo</h2>
+            <p class="text-sm text-slate-500">Muestra incidencias pendientes y en progreso de tu equipo.</p>
+          </div>
+          <div class="text-sm text-slate-500">
+            <span id="tech-map-count" class="font-semibold text-slate-900">0</span> incidencias visibles
+          </div>
+        </div>
+      </div>
+      <div id="technician-incidents-map" class="rounded-2xl border border-slate-200 shadow bg-white"></div>
+    </section>
 
     <!-- MODAL INFORME TECNICO -->
     <div id="report-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/60 px-4">

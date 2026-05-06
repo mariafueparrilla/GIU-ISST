@@ -17,6 +17,8 @@ import java.time.Instant;
  * @param creationInstant instante de creacion con timestamp completo.
  * @param creatorDni dni del usuario creador.
  * @param creatorName nombre del usuario creador.
+ * @param ubicacionLatitud latitud de la ubicacion.
+ * @param ubicacionLongitud longitud de la ubicacion.
  * @param ubicacionMunicipio municipio de la ubicacion.
  * @param ubicacionCalle calle de la ubicacion.
  * @param ubicacionNumero numero de la ubicacion.
@@ -37,6 +39,8 @@ public record IncidentPreviewResponse(
     String closerDni,
     String creatorDni,
     String creatorName,
+    Double ubicacionLatitud,
+    Double ubicacionLongitud,
     String ubicacionMunicipio,
     String ubicacionCalle,
     Integer ubicacionNumero,
