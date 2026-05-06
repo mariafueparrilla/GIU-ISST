@@ -645,7 +645,7 @@ function renderAdminDashboard() {
                   id="team-${team.teamKey}"
                   class="kanban-column tech-column space-y-3 bg-slate-50 rounded-xl p-2"
                   data-team="${team.teamKey}"
-                  style="height: clamp(11rem, calc(7.5rem + ${Math.max(team.technicians.length, 1)} * 4.75rem), 42rem);"
+                  style="min-height: max(11rem, calc(7.5rem + ${Math.max(team.technicians.length, 1)} * 4.75rem));"
                 >
                   ${team.technicians.length === 0 ? `
                     <div class="text-center text-xs text-slate-400 py-4">Sin tecnicos</div>
