@@ -340,17 +340,17 @@ function renderIncidenciasSection() {
       </h1>
     </div>
 
-    <div class="mb-6 bg-white border border-slate-200 rounded-2xl p-3 shadow-sm max-w-4xl">
+    <div class="mb-6 bg-white border border-slate-200 rounded-2xl p-3 shadow-sm w-full max-w-none">
       <div class="mb-3">
         <h3 class="text-sm font-medium text-slate-600">Filtrar</h3>
       </div>
       <div class="flex gap-3 flex-wrap">
-        <details class="group relative rounded-2xl border border-slate-200 bg-slate-50 p-3 overflow-visible flex-1 min-w-0">
+        <details class="group relative rounded-2xl border border-slate-200 bg-slate-50 p-3 overflow-visible flex-1 min-w-[16rem]">
           <summary class="flex cursor-pointer items-center justify-between rounded-2xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100">
             <span>Prioridad</span>
             <span class="text-slate-400">${selectedPriorityLabel}</span>
           </summary>
-          <div class="absolute left-0 right-0 top-full z-50 mt-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
+          <div class="absolute left-0 top-full z-50 mt-2 w-[min(36rem,calc(100vw-2rem))] rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
             <div class="mb-3 flex items-center justify-between gap-2">
               <span class="text-sm text-slate-500">Selecciona prioridades</span>
               <button type="button" class="incident-filter-clear-btn rounded-2xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-200" data-filter-type="priority">Limpiar</button>
@@ -366,12 +366,12 @@ function renderIncidenciasSection() {
           </div>
         </details>
 
-        <details class="group relative rounded-2xl border border-slate-200 bg-slate-50 p-3 overflow-visible flex-1 min-w-0">
+        <details class="group relative rounded-2xl border border-slate-200 bg-slate-50 p-3 overflow-visible flex-1 min-w-[16rem]">
           <summary class="flex cursor-pointer items-center justify-between rounded-2xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100">
             <span>Estado</span>
             <span class="text-slate-400">${selectedStateLabel}</span>
           </summary>
-          <div class="absolute left-0 right-0 top-full z-50 mt-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
+          <div class="absolute left-0 top-full z-50 mt-2 w-[min(36rem,calc(100vw-2rem))] rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
             <div class="mb-3 flex items-center justify-between gap-2">
               <span class="text-sm text-slate-500">Selecciona estados</span>
               <button type="button" class="incident-filter-clear-btn rounded-2xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-200" data-filter-type="state">Limpiar</button>
@@ -387,12 +387,12 @@ function renderIncidenciasSection() {
           </div>
         </details>
 
-        <details class="group relative rounded-2xl border border-slate-200 bg-slate-50 p-3 overflow-visible flex-1 min-w-0">
+        <details class="group relative rounded-2xl border border-slate-200 bg-slate-50 p-3 overflow-visible flex-1 min-w-[16rem]">
           <summary class="flex cursor-pointer items-center justify-between rounded-2xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100">
             <span>Equipo</span>
             <span class="text-slate-400">${selectedTeamLabel}</span>
           </summary>
-          <div class="absolute left-0 right-0 top-full z-50 mt-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
+          <div class="absolute left-0 top-full z-50 mt-2 w-[min(36rem,calc(100vw-2rem))] rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
             <div class="mb-3 flex items-center justify-between gap-2">
               <span class="text-sm text-slate-500">Selecciona equipos</span>
               <button type="button" class="incident-filter-clear-btn rounded-2xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-200" data-filter-type="team">Limpiar</button>
@@ -432,51 +432,47 @@ function renderIncidenciasSection() {
       <div id="admin-incidents-map" class="rounded-2xl border border-slate-200"></div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      ${filteredIncidents.map((incident) => `
-        <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition cursor-pointer incident-card" data-incident-id="${incident.id}">
-          <div class="h-48 bg-gradient-to-br from-slate-200 to-slate-300 relative">
-            ${incident.previewImageBase64 ? `
-              <img src="data:image/jpeg;base64,${incident.previewImageBase64}" alt="Foto de la incidencia" class="w-full h-full object-cover" />
-            ` : `
-              <div class="w-full h-full flex items-center justify-center">
-                <div class="text-center text-slate-400">
-                  <i data-lucide="camera" style="width:48px;height:48px;margin:0 auto 8px;"></i>
-                  <p class="text-sm font-medium">Sin foto</p>
-                </div>
-              </div>
-            `}
-            <div class="absolute top-3 right-3">
-              <span class="px-2 py-1 rounded-full text-xs font-semibold bg-white/90 backdrop-blur-sm ${stateColorMap[incident.state] || 'bg-slate-100'}">
-                ${stateLabelMap[incident.state] || incident.state}
-              </span>
+    <div class="space-y-4">
+      ${(() => {
+        const order = { creada: 0, asignada: 1, resuelta: 2, cerrada: 3, rechazada: 4 };
+        const sorted = filteredIncidents.slice().sort((a, b) => {
+          const ka = order[normalizeStateKey(a.state)] ?? 99;
+          const kb = order[normalizeStateKey(b.state)] ?? 99;
+          if (ka !== kb) return ka - kb;
+          return (a.id || 0) - (b.id || 0);
+        });
+
+        return sorted.map((incident) => renderAdminIncidentRow(incident)).join('');
+      })()}
+    </div>
+  `;
+}
+
+function renderAdminIncidentRow(incident) {
+  return `
+    <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm cursor-pointer hover:shadow-md transition incident-detail-link" data-incident-id="${incident.id}">
+      <div class="flex items-start gap-4">
+        <div class="w-28 h-20 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 flex-shrink-0">
+          ${incident.previewImageBase64 ? `
+            <img src="data:image/jpeg;base64,${incident.previewImageBase64}" alt="Preview" class="w-full h-full object-cover" />
+          ` : `
+            <div class="w-full h-full flex items-center justify-center">
+              <i data-lucide="image-off" style="width:22px;height:22px;color:#cbd5e1;"></i>
             </div>
-          </div>
-
-          <div class="p-4">
-            <div class="space-y-2">
-              <h3 class="text-sm font-semibold text-slate-900 line-clamp-2">${incident.title}</h3>
-
-              <p class="text-xs text-slate-600 line-clamp-2">${incident.description}</p>
-
-              <div class="flex items-center gap-2 flex-wrap pt-2">
-                <span class="px-2 py-1 rounded-full text-xs font-semibold ${priorityColorMap[incident.priority] || 'bg-slate-100'}">
-                  ${incident.priority?.toUpperCase() || 'N/A'}
-                </span>
-                <span class="text-xs text-slate-500">${incident.category?.toUpperCase() || 'N/A'}</span>
-              </div>
-
-              <div class="text-xs text-slate-400 border-t border-slate-100 pt-2 mt-2">
-                <div class="flex items-center gap-1">
-                  <i data-lucide="map-pin" style="width:12px;height:12px;"></i>
-                  <span>${incident.ubicacionMunicipio}, ${incident.ubicacionCalle} ${incident.ubicacionNumero}</span>
-                </div>
-                <div class="mt-1 text-slate-500">Reportante: ${incident.creatorDni}</div>
-              </div>
-            </div>
-          </div>
+          `}
         </div>
-      `).join('')}
+
+        <div class="flex-grow">
+          <h3 class="font-semibold text-slate-900">${incident.title}</h3>
+          <p class="text-sm text-slate-600 mt-1 line-clamp-2">${incident.description}</p>
+          <p class="text-xs text-slate-400 mt-2">#${incident.id} · ${incident.creatorDni} · Estado: <span class="px-2 py-1 rounded-full text-xs font-semibold ${stateColorMap[incident.state] || 'bg-slate-100'}">${stateLabelMap[incident.state] || incident.state}</span></p>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap justify-end ml-auto">
+          <span class="text-xs text-slate-500">${incident.category?.toUpperCase() || '-'}</span>
+          <span class="px-2 py-1 rounded-full text-xs font-semibold ${priorityColorMap[incident.priority] || 'bg-slate-100'}">${incident.priority?.toUpperCase() || 'N/A'}</span>
+        </div>
+      </div>
     </div>
   `;
 }
