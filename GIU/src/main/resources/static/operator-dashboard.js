@@ -149,7 +149,17 @@ function renderIncidentCard(incident) {
 
   return `
     <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm cursor-pointer hover:shadow-md transition incident-detail-link" data-incident-id="${incident.id}">
-      <div class="flex items-start justify-between gap-4">
+      <div class="flex items-start gap-4">
+        <div class="w-28 h-20 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 flex-shrink-0">
+          ${incident.previewImageBase64 ? `
+            <img src="data:image/jpeg;base64,${incident.previewImageBase64}" alt="Preview" class="w-full h-full object-cover" />
+          ` : `
+            <div class="w-full h-full flex items-center justify-center">
+              <i data-lucide="image-off" style="width:22px;height:22px;color:#cbd5e1;"></i>
+            </div>
+          `}
+        </div>
+
         <div class="flex-grow">
           <h3 class="font-semibold text-slate-900">${incident.title}</h3>
           <p class="text-sm text-slate-600 mt-1">${incident.description}</p>
@@ -158,7 +168,7 @@ function renderIncidentCard(incident) {
           <p class="text-xs text-slate-400 mt-1">Equipo actual: ${(incident.assignedTeam || 'sin_asignar').toUpperCase()}</p>
         </div>
 
-        <div class="flex items-center gap-2 flex-wrap justify-end">
+        <div class="flex items-center gap-2 flex-wrap justify-end ml-auto">
           ${isResolved ? `
             <button class="confirm-resolution-btn px-3 py-2 rounded-xl text-white text-sm font-semibold" style="background:#7c3aed;" data-id="${incident.id}">
               Revisar resolución
