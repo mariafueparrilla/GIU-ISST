@@ -1,6 +1,7 @@
 package com.gui.gui.incident;
 
 import java.util.List;
+import java.time.Instant;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -22,6 +23,11 @@ public interface IncidentRepository extends JpaRepository<IncidentEntity, Long> 
      * Devuelve incidencias asignadas a un equipo tecnico ordenadas descendente.
      */
     List<IncidentEntity> findByAssignedTeamOrderByCreationDateDescIdDesc(IncidentCategory assignedTeam);
+
+    /**
+     * Recupera incidencias rechazadas cuya fecha de rechazo ya excedio el limite.
+     */
+    List<IncidentEntity> findByStateAndRejectionDateBefore(IncidentState state, Instant rejectionDate);
 
     @Modifying
     @Transactional
