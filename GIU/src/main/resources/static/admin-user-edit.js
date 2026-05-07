@@ -8,7 +8,7 @@ const roleMap = {
   admin: 'Administrador',
   user: 'Usuario',
   operator: 'Operario',
-  technician: 'Tecnico'
+  technician: 'Técnico'
 };
 
 const teamMap = {
@@ -38,7 +38,7 @@ function isValidEmail(email) {
 async function loadSessionUser() {
   const response = await fetch('/api/auth/me', { credentials: 'same-origin' });
   if (!response.ok) {
-    throw new Error('Sesion no valida');
+    throw new Error('Sesión no valida');
   }
 
   currentUser = await response.json();
