@@ -9,7 +9,7 @@ const roleMap = {
   admin: 'Administrador',
   user: 'Usuario',
   operator: 'Operario',
-  technician: 'Tecnico'
+  technician: 'Técnico'
 };
 
 const stateLabelMap = {
@@ -672,7 +672,7 @@ function renderAdminDashboard() {
 
         <section id="equipos" class="tab-content hidden pt-6">
           <div class="flex items-center justify-between mb-6">
-            <h1 class="text-3xl font-bold text-slate-900">Equipos tecnicos</h1>
+            <h1 class="text-3xl font-bold text-slate-900">Equipos técnicos</h1>
           </div>
 
           <div class="flex flex-nowrap items-start gap-4 overflow-x-auto pb-20" style="scrollbar-width: none;">
@@ -695,7 +695,7 @@ function renderAdminDashboard() {
                   style="min-height: max(11rem, calc(7.5rem + ${Math.max(team.technicians.length, 1)} * 4.75rem));"
                 >
                   ${team.technicians.length === 0 ? `
-                    <div class="text-center text-xs text-slate-400 py-4">Sin tecnicos</div>
+                    <div class="text-center text-xs text-slate-400 py-4">Sin técnicos</div>
                   ` : `
                     ${team.technicians.map((technician) => `
                       <div class="bg-white border-2 border-slate-200 rounded-xl p-3 cursor-move shadow-sm hover:shadow-md transition technician-card" draggable="true" data-dni="${technician.dni}" data-team="${team.teamKey}">
@@ -717,7 +717,7 @@ function renderAdminDashboard() {
 
         <section id="estadisticas" class="tab-content hidden">
           <div class="max-w-5xl mx-auto">
-            <h1 class="text-4xl font-bold text-slate-900 mb-8">Estadisticas</h1>
+            <h1 class="text-4xl font-bold text-slate-900 mb-8">Estadísticas</h1>
             <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
               <div class="bg-white rounded-2xl border border-slate-200 p-4 text-center"><p class="text-3xl font-bold text-slate-900">${incidentStats.total}</p><span class="inline-block mt-2 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-500">Total incidencias</span></div>
               <div class="bg-white rounded-2xl border border-slate-200 p-4 text-center"><p class="text-3xl font-bold text-slate-900">${formatDays(incidentKpis.averageSolveDays)}</p><span class="inline-block mt-2 px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">Tiempo medio de resolución</span></div>
@@ -832,7 +832,7 @@ async function updateTechnicianTeam(dni, newTeam) {
 
   if (!response.ok) {
     const message = await response.text();
-    alert(message || 'No se pudo actualizar el equipo del tecnico');
+    alert(message || 'No se pudo actualizar el equipo del técnico');
     return false;
   }
 
