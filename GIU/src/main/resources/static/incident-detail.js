@@ -432,7 +432,7 @@ function renderIncidentDetail() {
             
             <div class="space-y-3 text-sm">
               <div>
-                <p class="text-slate-500 font-medium">Creacion</p>
+                <p class="text-slate-500 font-medium">Creación</p>
                 <p class="text-slate-900">${formatDate(incidentDetail.creationInstant)} - ${incidentDetail.creatorDni || incidentDetail.creatorName || '-'}</p>
               </div>
               ${incidentDetail.asignationDate ? `<div>
