@@ -15,7 +15,7 @@ const roleMap = {
 async function loadSessionUser() {
   const response = await fetch('/api/auth/me', { credentials: 'same-origin' });
   if (!response.ok) {
-    throw new Error('Sesion no valida');
+    throw new Error('Sesión no válida');
   }
 
   currentUser = await response.json();
@@ -55,7 +55,7 @@ async function addImagesToForm(files) {
     }
 
     if (selectedImages.length >= 3) {
-      alert('Se puede subir maximo 3 imagenes');
+      alert('Se puede subir máximo 3 imágenes');
       break;
     }
 
@@ -81,7 +81,7 @@ function renderImagePreviews() {
   if (!container) return;
 
   if (selectedImages.length === 0) {
-    container.innerHTML = '<p class="text-slate-400 text-sm">No hay imagenes seleccionadas</p>';
+    container.innerHTML = '<p class="text-slate-400 text-sm">No hay imágenes seleccionadas</p>';
     return;
   }
 
@@ -133,7 +133,7 @@ function initMapPicker() {
   // Crear marcador inicial
   mapMarker = L.marker([defaultCenter.lat, defaultCenter.lng], {
   draggable: true,
-  title: 'Ubicacion de la incidencia'
+  title: 'Ubicación de la incidencia'
   }).addTo(mapPicker);
 
 // La ubicación inicial es solo visual. No cuenta como ubicación válida.
@@ -352,7 +352,7 @@ function renderNewIncident() {
           <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
             <form id="incident-form" class="space-y-5">
               <div>
-                <label class="block text-sm font-semibold text-slate-700 mb-2">Titulo</label>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Título</label>
                 <input id="incident-title" type="text" maxlength="160" required class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-surface-50 text-sm text-slate-700" />
               </div>
 
@@ -363,7 +363,7 @@ function renderNewIncident() {
 
               <div class="grid grid-cols-2 gap-4">
                 <div>
-                  <label class="block text-sm font-semibold text-slate-700 mb-2">Categoria</label>
+                  <label class="block text-sm font-semibold text-slate-700 mb-2">Categoría</label>
                   <select id="incident-category" class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-surface-50 text-sm text-slate-700" required>
                     <option value="ALUMBRADO">ALUMBRADO</option>
                     <option value="LIMPIEZA">LIMPIEZA</option>
@@ -377,22 +377,22 @@ function renderNewIncident() {
               </div>
 
               <div>
-                <label class="block text-sm font-semibold text-slate-700 mb-2">Imagenes (maximo 3)</label>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Imágenes (máximo 3)</label>
                 <div id="drag-drop-zone" class="border-2 border-dashed border-slate-300 rounded-xl p-6 bg-slate-50 text-center cursor-pointer hover:border-brand-500 hover:bg-blue-50 transition">
                   <input id="image-input" type="file" multiple accept="image/*" class="hidden" />
                   <div class="flex flex-col items-center gap-2">
                     <i data-lucide="cloud-upload" style="width:24px;height:24px;color:#64748b;"></i>
-                    <p class="text-sm font-semibold text-slate-700">Arrastra imagenes aqui</p>
+                    <p class="text-sm font-semibold text-slate-700">Arrastra imágenes aqui</p>
                     <p class="text-xs text-slate-500">o haz clic para seleccionar</p>
                   </div>
                 </div>
                 <div id="image-previews" class="mt-3 grid grid-cols-3 gap-3">
-                  <p class="text-slate-400 text-sm">No hay imagenes seleccionadas</p>
+                  <p class="text-slate-400 text-sm">No hay imágenes seleccionadas</p>
                 </div>
               </div>
 
               <div>
-                <label class="block text-sm font-semibold text-slate-700 mb-2">Ubicacion en el mapa</label>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Ubicación en el mapa</label>
                 <div id="map-picker" class="rounded-xl border border-slate-200"></div>
               </div>
 
@@ -409,11 +409,11 @@ function renderNewIncident() {
 
               <div class="grid grid-cols-2 gap-4">
                 <div>
-                  <label class="block text-sm font-semibold text-slate-700 mb-2">Numero</label>
+                  <label class="block text-sm font-semibold text-slate-700 mb-2">Número</label>
                   <input id="ubicacion-numero" type="number" required class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-surface-50 text-sm text-slate-700" />
                 </div>
                 <div>
-                  <label class="block text-sm font-semibold text-slate-700 mb-2">Codigo postal</label>
+                  <label class="block text-sm font-semibold text-slate-700 mb-2">Código postal</label>
                   <input id="ubicacion-cp" type="text" maxlength="5" inputmode="numeric" pattern="[0-9]{5}" required class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-surface-50 text-sm text-slate-700" />
                 </div>
               </div>
