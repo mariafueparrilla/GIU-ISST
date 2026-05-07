@@ -912,12 +912,12 @@ function attachAdminEvents() {
     });
   });
 
-  document.querySelectorAll('.incident-card').forEach(card => {
+  document.querySelectorAll('.incident-detail-link').forEach(card => {
     card.addEventListener('click', () => {
       const incidentId = card.dataset.incidentId;
       window.location.href = `/incident-detail?id=${incidentId}`;
     });
-  });
+ });
 
   document.querySelectorAll('.edit-user-btn').forEach(btn => {
     btn.addEventListener('click', () => {
