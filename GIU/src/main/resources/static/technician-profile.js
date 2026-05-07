@@ -410,22 +410,69 @@ function renderTechnicianMapView() {
     technicianIncidentsMarkersLayer.clearLayers();
   }
 
-  const bounds = [];
+  // Group incidents by coordinates to handle overlapping locations
+  const coordinateGroups = {};
   visibleIncidents.forEach((incident) => {
     const coordinates = getIncidentCoordinates(incident);
     if (!coordinates) return;
 
-    const color = getTechnicianMapColor(incident.uiStatus);
-    const marker = L.marker(coordinates, {
-      icon: getTechnicianPinIcon(color)
-    });
+    const key = coordinates.join(",");
+    if (!coordinateGroups[key]) {
+      coordinateGroups[key] = [];
+    }
+    coordinateGroups[key].push(incident);
+  });
 
-    marker.bindPopup(getTechnicianMapPopup(incident));
-    marker.on("click", () => {
-      window.location.href = `/incident-detail?id=${incident.id}`;
+  const bounds = [];
+  Object.entries(coordinateGroups).forEach(([coordKey, incidents]) => {
+    const baseCoords = coordKey.split(",").map(Number);
+
+    incidents.forEach((incident, index) => {
+      let markerCoords = baseCoords;
+
+      // If multiple incidents at same location, offset them in a circle
+      if (incidents.length > 1) {
+        const offsetDistance = Math.max(0.0008, 0.00008 * Math.sqrt(incidents.length * 2));
+        const angle = (index / incidents.length) * Math.PI * 2;
+        markerCoords = [
+          baseCoords[0] + Math.cos(angle) * offsetDistance,
+          baseCoords[1] + Math.sin(angle) * offsetDistance
+        ];
+      }
+
+      const color = getTechnicianMapColor(incident.uiStatus);
+      const marker = L.marker(markerCoords, {
+        icon: getTechnicianPinIcon(color)
+      });
+
+      // Enhanced popup for clustered incidents
+      let popupContent = getTechnicianMapPopup(incident);
+      if (incidents.length > 1) {
+        popupContent = `
+          <div style="min-width: 220px; font-family: DM Sans, sans-serif;">
+            <div style="font-size: 12px; color: #64748b; margin-bottom: 8px; font-weight: 600;">
+              ${incidents.length} incidencias en esta ubicación
+            </div>
+            <div style="border-top: 1px solid #e2e8f0; padding-top: 8px;">
+              ${incidents.map((inc) => `
+                <div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9;">
+                  <div style="font-weight: 700; margin-bottom: 4px; font-size: 12px;">${inc.title}</div>
+                  <div style="font-size: 11px; color: #64748b; margin-bottom: 2px;">${getStatusLabel(inc.uiStatus)}</div>
+                  <div style="font-size: 11px; color: #475569;">#${inc.id}</div>
+                </div>
+              `).join("")}
+            </div>
+          </div>
+        `;
+      }
+
+      marker.bindPopup(popupContent);
+      marker.on("click", () => {
+        window.location.href = `/incident-detail?id=${incident.id}`;
+      });
+      marker.addTo(technicianIncidentsMarkersLayer);
+      bounds.push(markerCoords);
     });
-    marker.addTo(technicianIncidentsMarkersLayer);
-    bounds.push(coordinates);
   });
 
   if (bounds.length > 0) {
