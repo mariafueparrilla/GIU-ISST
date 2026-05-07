@@ -1,0 +1,1824 @@
+{
+  "info": {
+    "_postman_id": "95488f94-e763-4191-8ad9-e010f78eb953",
+    "name": "GIU - Pruebas API",
+    "description": "- Esta carpeta agrupa las pruebas funcionales realizadas sobre la API de la aplicación GIU. Incluye tanto pruebas de integración como pruebas end-to-end a nivel API, ejecutadas mediante Postman.\n    \n- Las pruebas de integración validan endpoints concretos de forma individual, comprobando que la comunicación entre controladores, servicios, repositorios, seguridad y base de datos funciona correctamente. Estas pruebas permiten verificar operaciones específicas como el inicio de sesión, la creación de incidencias, la consulta de incidencias propias, la asignación por parte del operario y el control de permisos.\n    \n- Las pruebas end-to-end validan flujos completos de negocio encadenando varias peticiones HTTP y utilizando distintos roles del sistema. Estas pruebas comprueban el ciclo de vida de una incidencia desde que es creada por un ciudadano hasta que es gestionada por un operario y un técnico, incluyendo la asignación, resolución, revisión y cierre o devolución de la incidencia.\n    \n- El objetivo conjunto de esta carpeta es demostrar que la API no solo responde correctamente a operaciones aisladas, sino que también soporta de forma coherente los flujos principales de uso de la aplicación.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "54568441",
+    "_collection_link": "https://go.postman.co/collection/54568441-95488f94-e763-4191-8ad9-e010f78eb953?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "01 - Integración",
+      "item": [
+        {
+          "name": "IT-01 — Login correcto como administrador",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"IT-01 - Login admin devuelve 200 OK\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "",
+                  "pm.test(\"IT-01 - El usuario autenticado es ADMIN\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.role.toUpperCase()).to.equal(\"ADMIN\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dni\": \"{{adminDni}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "## IT-01 — Login correcto como administrador\n\nVerifica que un usuario con rol **ADMIN** puede autenticarse correctamente en el sistema.\n\n### Endpoint\n\n`POST {{baseUrl}}/api/auth/login`\n\n### Descripción\n\nEnvía las credenciales del administrador (`adminDni` y `adminPassword`) al endpoint de autenticación. Se espera una respuesta `200 OK` con un campo `role` cuyo valor sea `ADMIN`.\n\n### Headers\n\n| Key | Value |\n| --- | --- |\n| Content-Type | application/json |\n\n### Request Body\n\n``` json\n{\n  \"dni\": \"{{adminDni}}\",\n  \"password\": \"{{adminPassword}}\"\n}\n\n ```\n\n### Variables utilizadas\n\n| Variable | Descripción |\n| --- | --- |\n| `{{baseUrl}}` | URL base del servidor |\n| `{{adminDni}}` | DNI del usuario administrador |\n| `{{adminPassword}}` | Contraseña del usuario administrador |\n\n### Respuesta esperada\n\n- **Status:** `200 OK`\n    \n- **Body:** Objeto JSON con al menos el campo `role` igual a `\"ADMIN\"`.\n    \n\n### Tests\n\n| Test | Condición |\n| --- | --- |\n| IT-01 - Login admin devuelve 200 OK | `response.code === 200` |\n| IT-01 - El usuario autenticado es ADMIN | `response.json().role.toUpperCase() === \"ADMIN\"` |"
+          },
+          "response": []
+        },
+        {
+          "name": "IT-02 — Login incorrecto",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"IT-02 - El login incorrecto no se permite\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400, 401, 403]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dni\": \"{{adminDni}}\",\n  \"password\": \"password_mal\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "## Descripción\n\nEste caso de prueba verifica que la API **rechaza correctamente las credenciales incorrectas** durante el proceso de autenticación.\n\nSe envía una solicitud de login con un DNI válido (`{{adminDni}}`) pero con una contraseña incorrecta (`password_mal`), y se comprueba que el servidor responde con un código de error apropiado.\n\n---\n\n## Endpoint\n\n| Campo   | Valor                    |\n|---------|--------------------------|\n| Método  | `POST`                   |\n| URL     | `{{baseUrl}}/api/auth/login` |\n\n---\n\n## Cabeceras\n\n| Cabecera       | Valor              |\n|----------------|--------------------|\n| `Content-Type` | `application/json` |\n\n---\n\n## Cuerpo de la solicitud\n\n```json\n{\n  \"dni\": \"{{adminDni}}\",\n  \"password\": \"password_mal\"\n}\n```\n\n| Campo      | Descripción                                              |\n|------------|----------------------------------------------------------|\n| `dni`      | DNI del usuario administrador (variable de entorno).     |\n| `password` | Contraseña incorrecta, usada deliberadamente para fallar.|\n\n---\n\n## Comportamiento esperado\n\nLa API debe **denegar el acceso** y devolver uno de los siguientes códigos de estado HTTP:\n\n- `400 Bad Request` — Solicitud malformada o credenciales inválidas.\n- `401 Unauthorized` — Credenciales incorrectas.\n- `403 Forbidden` — Acceso denegado.\n\n---\n\n## Aserción del test\n\n```javascript\npm.test(\"IT-02 - El login incorrecto no se permite\", function () {\n    pm.expect(pm.response.code).to.be.oneOf([400, 401, 403]);\n});\n```\n\nEl test pasa si el código de respuesta es `400`, `401` o `403`."
+          },
+          "response": []
+        },
+        {
+          "name": "IT-03-A — Crear incidencia como ciudadano - Login Ciudadano",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Login ciudadano correcto\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dni\": \"{{userDni}}\",\n  \"password\": \"{{userPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "## IT-03-A — Login Ciudadano\n\nEste paso forma parte del flujo de pruebas de integración **IT-03: Crear incidencia como ciudadano**. Autentica al usuario ciudadano antes de ejecutar los pasos posteriores del flujo.\n\n### ¿Qué hace?\nRealiza el login de un usuario ciudadano contra el endpoint de autenticación de la API.\n\n### Endpoint\n`POST {{baseUrl}}/api/auth/login`\n\n### Cabeceras\n| Clave | Valor |\n|---|---|\n| Content-Type | application/json |\n\n### Cuerpo de la petición (JSON)\n```json\n{\n  \"dni\": \"{{userDni}}\",\n  \"password\": \"{{userPassword}}\"\n}\n```\n\n- `dni`: DNI del usuario ciudadano, obtenido de la variable de entorno `{{userDni}}`.\n- `password`: Contraseña del usuario ciudadano, obtenida de la variable de entorno `{{userPassword}}`.\n\n### Resultado esperado\nRespuesta HTTP **200 OK** cuando el login es correcto.\n\n### Test incluido\nVerifica que el código de respuesta es 200:\n> *\"Login ciudadano correcto\"*"
+          },
+          "response": []
+        },
+        {
+          "name": "IT-03-B — Crear incidencia como ciudadano - Request de creación",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"IT-03 - La incidencia se crea correctamente\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(201);",
+                  "});",
+                  "",
+                  "pm.test(\"IT-03 - La incidencia tiene estado CREADA\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.state.toUpperCase()).to.equal(\"CREADA\");",
+                  "});",
+                  "",
+                  "pm.test(\"IT-03 - Guardar ID de incidencia\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.environment.set(\"incidentId\", json.id);",
+                  "    pm.expect(json.id).to.not.be.undefined;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"IT-03 - Farola apagada Postman\",\n  \"description\": \"Incidencia creada desde Postman para probar la creación de incidencias.\",\n  \"category\": \"ALUMBRADO\",\n  \"ubicacion\": {\n    \"municipio\": \"Madrid\",\n    \"calle\": \"Gran Vía\",\n    \"numero\": 12,\n    \"codigoPostal\": 28013,\n    \"latitud\": 40.4204,\n    \"longitud\": -3.7017,\n    \"formattedAddress\": \"Gran Vía 12, 28013 Madrid\",\n    \"placeId\": \"postman-test\"\n  },\n  \"images\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/incidents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "incidents"
+              ]
+            },
+            "description": "## IT-03-B — Crear incidencia como ciudadano\n\nCrea una nueva incidencia en el sistema como ciudadano autenticado. Este endpoint permite registrar una incidencia urbana (por ejemplo, una farola apagada) proporcionando su título, descripción, categoría y ubicación.\n\n### Endpoint\n\n`POST {{baseUrl}}/api/incidents`\n\n### Headers\n\n| Key | Value |\n|---|---|\n| Content-Type | application/json |\n\n### Request Body\n\n```json\n{\n  \"title\": \"IT-03 - Farola apagada Postman\",\n  \"description\": \"Incidencia creada desde Postman para probar la creación de incidencias.\",\n  \"category\": \"ALUMBRADO\",\n  \"ubicacion\": {\n    \"municipio\": \"Madrid\",\n    \"calle\": \"Gran Vía\",\n    \"numero\": 12,\n    \"codigoPostal\": 28013,\n    \"latitud\": 40.4204,\n    \"longitud\": -3.7017,\n    \"formattedAddress\": \"Gran Vía 12, 28013 Madrid\",\n    \"placeId\": \"postman-test\"\n  },\n  \"images\": []\n}\n```\n\n#### Campos del body\n\n| Campo | Tipo | Descripción |\n|---|---|---|\n| `title` | string | Título descriptivo de la incidencia |\n| `description` | string | Descripción detallada del problema |\n| `category` | string | Categoría de la incidencia (ej. `ALUMBRADO`) |\n| `ubicacion.municipio` | string | Municipio donde se encuentra la incidencia |\n| `ubicacion.calle` | string | Calle de la incidencia |\n| `ubicacion.numero` | integer | Número de la calle |\n| `ubicacion.codigoPostal` | integer | Código postal |\n| `ubicacion.latitud` | number | Latitud geográfica |\n| `ubicacion.longitud` | number | Longitud geográfica |\n| `ubicacion.formattedAddress` | string | Dirección formateada completa |\n| `ubicacion.placeId` | string | Identificador del lugar |\n| `images` | array | Lista de imágenes adjuntas (puede estar vacía) |\n\n### Respuesta esperada\n\n- **Código HTTP:** `201 Created`\n- El cuerpo de la respuesta contiene la incidencia creada, incluyendo su `id` y su estado inicial.\n\n#### Validaciones automáticas (tests)\n\n| Test | Condición |\n|---|---|\n| La incidencia se crea correctamente | `response.status === 201` |\n| La incidencia tiene estado CREADA | `response.body.state === \"CREADA\"` |\n| Guardar ID de incidencia | Guarda `response.body.id` en la variable de entorno `incidentId` |\n\n### Variables de entorno utilizadas\n\n| Variable | Descripción |\n|---|---|\n| `{{baseUrl}}` | URL base del servidor (ej. `http://localhost:8080`) |\n| `incidentId` | Se establece automáticamente tras la ejecución con el ID de la incidencia creada |"
+          },
+          "response": []
+        },
+        {
+          "name": "IT-04 — Ver mis incidencias",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"IT-04 - Devuelve 200 OK\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "",
+                  "pm.test(\"IT-04 - La respuesta es una lista\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an(\"array\");",
+                  "});",
+                  "",
+                  "pm.test(\"IT-04 - Aparece la incidencia creada\", function () {",
+                  "    const json = pm.response.json();",
+                  "    const incidentId = Number(pm.environment.get(\"incidentId\"));",
+                  "    const found = json.some(incident => incident.id === incidentId);",
+                  "    pm.expect(found).to.equal(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/incidents/my",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "incidents",
+                "my"
+              ]
+            },
+            "description": "## IT-04 — Ver mis incidencias\n\nEste endpoint permite al usuario autenticado obtener la lista de todas sus incidencias registradas en el sistema.\n\n**Método:** `GET`  \n**URL:** `{{baseUrl}}/api/incidents/my`\n\n---\n\n### Autenticación\n\nLa petición requiere que el usuario esté autenticado. La sesión o token de autenticación debe estar activo para que el servidor identifique al usuario y devuelva únicamente sus incidencias.\n\n---\n\n### Respuesta esperada\n\n- **200 OK** — Se devuelve un array JSON con las incidencias pertenecientes al usuario autenticado. Cada elemento del array representa una incidencia con sus datos asociados (incluyendo el campo `id`).\n\n---\n\n### Aserciones de prueba\n\nLas pruebas automáticas asociadas a esta petición verifican lo siguiente:\n\n1. **Código de respuesta 200 OK** — La petición se ha completado correctamente.\n2. **La respuesta es una lista** — El cuerpo de la respuesta es un array JSON.\n3. **Aparece la incidencia creada** — La incidencia cuyo `id` fue almacenado en la variable de entorno `incidentId` (creada en un paso anterior del flujo de pruebas) está presente en la lista devuelta."
+          },
+          "response": []
+        },
+        {
+          "name": "IT-05-A — Operador valida y asigna incidencia - Cierre de sesión",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "## Cierre de sesión — IT-05-A\n\nCierra la sesión del usuario actualmente autenticado, invalidando su token de acceso.\n\n### Método y endpoint\n\n`POST {{baseUrl}}/api/auth/logout`\n\n### Contexto\n\nEste paso forma parte del flujo de prueba de integración **IT-05-A — Operador valida y asigna incidencia**. Una vez que el operador ha completado las acciones de validación y asignación de la incidencia, se ejecuta este paso para cerrar correctamente la sesión activa.\n\n### Comportamiento esperado\n\nLa sesión del usuario queda cerrada y el token de autenticación es invalidado. A partir de este momento, cualquier petición que utilice el mismo token deberá recibir una respuesta de error de autenticación (`401 Unauthorized`)."
+          },
+          "response": []
+        },
+        {
+          "name": "IT-05-B — Operador valida y asigna incidencia - Login operador",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dni\": \"{{operatorDni}}\",\n  \"password\": \"{{operatorPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "## Login de operador\n\nRealiza la autenticación del operador contra el endpoint `POST /api/auth/login`.\n\n### Cuerpo de la petición\n\n```json\n{\n  \"dni\": \"{{operatorDni}}\",\n  \"password\": \"{{operatorPassword}}\"\n}\n```\n\nLos campos `dni` y `password` se obtienen de las variables de entorno `operatorDni` y `operatorPassword`.\n\n### Contexto del escenario de prueba\n\nEsta petición corresponde al **paso de login del operador** dentro del escenario **IT-05-B: Operador valida y asigna incidencia**. Es el primer paso necesario para que el operador se autentique y obtenga el token de sesión que le permitirá realizar las acciones de validación y asignación de la incidencia en los pasos posteriores."
+          },
+          "response": []
+        },
+        {
+          "name": "IT-05-C — Operador valida y asigna incidencia - Request",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"IT-05 - Operador valida la incidencia\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "",
+                  "pm.test(\"IT-05 - La incidencia queda asignada\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.state.toUpperCase()).to.equal(\"ASIGNADA\");",
+                  "    pm.expect(json.assignedTeam.toUpperCase()).to.equal(\"ALUMBRADO\");",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const baseUrl = pm.environment.get(\"baseUrl\");",
+                  "",
+                  "const body = {",
+                  "    title: \"IT-05 - Incidencia para validación operador\",",
+                  "    description: \"Incidencia creada automáticamente antes de IT-05-C para garantizar estado CREADA.\",",
+                  "    category: \"ALUMBRADO\",",
+                  "    ubicacion: {",
+                  "        municipio: \"Madrid\",",
+                  "        calle: \"Gran Vía\",",
+                  "        numero: 12,",
+                  "        codigoPostal: 28013,",
+                  "        latitud: 40.4204,",
+                  "        longitud: -3.7017,",
+                  "        formattedAddress: \"Gran Vía 12, 28013 Madrid\",",
+                  "        placeId: \"postman-test-it05\"",
+                  "    },",
+                  "    images: []",
+                  "};",
+                  "",
+                  "pm.sendRequest({",
+                  "    url: baseUrl + \"/api/incidents\",",
+                  "    method: \"POST\",",
+                  "    header: { \"Content-Type\": \"application/json\" },",
+                  "    body: { mode: \"raw\", raw: JSON.stringify(body) }",
+                  "}, function (err, res) {",
+                  "    if (!err && res.code === 201) {",
+                  "        const json = res.json();",
+                  "        pm.environment.set(\"incidentId\", json.id);",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"priority\": \"ALTA\",\n  \"team\": \"ALUMBRADO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/incidents/{{incidentId}}/operator-validate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "incidents",
+                "{{incidentId}}",
+                "operator-validate"
+              ]
+            },
+            "description": "## IT-05-C — Operador valida y asigna incidencia\n\nValida y asigna una incidencia a un equipo, haciendo que su estado pase de `CREADA` a `ASIGNADA`.\n\n### Endpoint\n\n`PATCH {{baseUrl}}/api/incidents/{{incidentId}}/operator-validate`\n\n### Autenticación\n\nEsta petición requiere una sesión con rol de operador. El script de pre-solicitud crea automáticamente una nueva incidencia e inicia sesión como operador para obtener un token válido, que se establece en la cabecera `Authorization` antes de enviar la petición.\n\n### Cuerpo de la petición\n\n| Campo | Tipo | Obligatorio | Descripción |\n|-------|------|-------------|-------------|\n| `priority` | string | Sí | Nivel de prioridad de la incidencia (p. ej. `ALTA`) |\n| `team` | string | Sí | Equipo al que se asigna la incidencia (p. ej. `ALUMBRADO`) |\n\n**Ejemplo:**\n```json\n{\n  \"priority\": \"ALTA\",\n  \"team\": \"ALUMBRADO\"\n}\n```\n\n### Resultado esperado\n\n**Estado:** `200 OK`\n\nEl cuerpo de la respuesta contiene el objeto de incidencia actualizado. Los siguientes campos son validados por los scripts de prueba:\n\n| Campo | Valor esperado |\n|-------|----------------|\n| `state` | `ASIGNADA` |\n| `assignedTeam` | `ALUMBRADO` |\n\n### Script de pre-solicitud\n\nEl script de pre-solicitud realiza automáticamente los siguientes pasos antes de enviar la petición:\n1. Crea una nueva incidencia con categoría `ALUMBRADO` para garantizar que comienza en estado `CREADA`.\n2. Inicia sesión como operador usando las variables de entorno `operatorDni` y `operatorPassword`.\n3. Almacena el `incidentId` resultante y el token de `Authorization` en el entorno.\n\n### Scripts de prueba\n\n| Prueba | Aserción |\n|--------|----------|\n| IT-05 - Operador valida la incidencia | El código de estado de la respuesta es `200` |\n| IT-05 - La incidencia queda asignada | `state` es `ASIGNADA` y `assignedTeam` es `ALUMBRADO` |\n\n### Variables de entorno utilizadas\n\n| Variable | Descripción |\n|----------|-------------|\n| `{{baseUrl}}` | URL base del servidor de la API |\n| `{{incidentId}}` | ID de la incidencia a validar (establecido por el script de pre-solicitud) |\n| `{{operatorDni}}` | DNI del operador usado para autenticación |\n| `{{operatorPassword}}` | Contraseña del operador usada para autenticación |"
+          },
+          "response": []
+        },
+        {
+          "name": "IT-06-A — Usuario normal intenta hacer acción de operador - Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "disabled": true
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "## IT-06-A — Usuario normal intenta hacer acción de operador: Logout\n\nVerifica que un usuario normal no puede ejecutar el logout de la sesión activa, ya que esta operación está reservada para operadores.\n\n### Endpoint\n\n`POST {{baseUrl}}/api/auth/logout`\n\n### Autenticación\n\nEl usuario normal debe estar autenticado en el sistema antes de ejecutar esta petición. Las variables de entorno `userDni` y `userPassword` deben estar configuradas correctamente.\n\n### Cuerpo de la petición\n\nEsta petición no requiere cuerpo.\n\n### Resultado esperado\n\n**Estado:** `403 Forbidden`\n\nEl sistema debe denegar la operación de logout cuando es invocada por un usuario con rol estándar, sin cerrar su sesión.\n\n### Scripts de prueba\n\n| Prueba | Aserción |\n|--------|----------|\n| IT-06 - Usuario normal no puede hacer logout (403 Forbidden) | El código de estado de la respuesta es `403` |\n\n### Variables de entorno utilizadas\n\n| Variable | Descripción |\n|----------|-------------|\n| `{{baseUrl}}` | URL base del servidor de la API |"
+          },
+          "response": []
+        },
+        {
+          "name": "IT-06-B — Usuario normal intenta hacer acción de operador - Login ciudadano",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"dni\": \"{{userDni}}\", \"password\": \"{{userPassword}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "## IT-06-B — Usuario normal intenta hacer acción de operador: Login ciudadano\n\nRealiza el login de un usuario con rol ciudadano como paso previo al flujo IT-06, en el que se verifica que un usuario sin privilegios de operador no puede ejecutar acciones reservadas para operadores.\n\n### Endpoint\n\n`POST {{baseUrl}}/api/auth/login`\n\n### Autenticación\n\nEsta petición no requiere autenticación previa. Las credenciales del usuario normal se envían en el cuerpo de la petición.\n\n### Cuerpo de la petición\n\n| Campo | Tipo | Obligatorio | Descripción |\n|-------|------|-------------|-------------|\n| `dni` | string | Sí | DNI del usuario normal (variable de entorno `userDni`) |\n| `password` | string | Sí | Contraseña del usuario normal (variable de entorno `userPassword`) |\n\n**Ejemplo:**\n```json\n{\n  \"dni\": \"{{userDni}}\",\n  \"password\": \"{{userPassword}}\"\n}\n```\n\n### Resultado esperado\n\n**Estado:** `200 OK`\n\nEl servidor devuelve un token JWT válido para el usuario con rol de ciudadano. Este token se utilizará en el paso siguiente (IT-06-C) para intentar acceder a endpoints restringidos a operadores, donde se espera una respuesta `403 Forbidden`.\n\n### Scripts de prueba\n\nEsta petición no tiene scripts de prueba propios. La validación de autorización se realiza en IT-06-C.\n\n### Variables de entorno utilizadas\n\n| Variable | Descripción |\n|----------|-------------|\n| `{{baseUrl}}` | URL base del servidor de la API |\n| `{{userDni}}` | DNI del usuario normal |\n| `{{userPassword}}` | Contraseña del usuario normal |"
+          },
+          "response": []
+        },
+        {
+          "name": "IT-06-C — Usuario normal intenta hacer acción de operador - Request",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"IT-06 - Ciudadano no puede validar incidencia (403 Forbidden)\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(403);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"priority\": \"ALTA\",\n  \"team\": \"ALUMBRADO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/incidents/{{incidentId}}/operator-validate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "incidents",
+                "{{incidentId}}",
+                "operator-validate"
+              ]
+            },
+            "description": "## IT-06-C — Usuario normal intenta hacer acción de operador: Validar incidencia\n\nVerifica que un usuario normal (ciudadano) no tiene permitido realizar acciones de nivel operador sobre una incidencia, concretamente validarla y asignarla a un equipo.\n\n### Endpoint\n\n`PATCH {{baseUrl}}/api/incidents/{{incidentId}}/operator-validate`\n\n### Autenticación\n\nEsta petición requiere un token JWT de un usuario con rol ciudadano, obtenido en el paso anterior (IT-06-B). El token se establece en la cabecera `Authorization` antes de enviar la petición.\n\n### Cuerpo de la petición\n\n| Campo | Tipo | Obligatorio | Descripción |\n|-------|------|-------------|-------------|\n| `priority` | string | Sí | Nivel de prioridad de la incidencia (p. ej. `ALTA`) |\n| `team` | string | Sí | Equipo al que se intenta asignar la incidencia (p. ej. `ALUMBRADO`) |\n\n**Ejemplo:**\n```json\n{\n  \"priority\": \"ALTA\",\n  \"team\": \"ALUMBRADO\"\n}\n```\n\n### Resultado esperado\n\n**Estado:** `403 Forbidden`\n\nEl servidor debe denegar la acción porque el usuario autenticado no tiene el rol de operador necesario para validar y asignar incidencias.\n\n### Scripts de prueba\n\n| Prueba | Aserción |\n|--------|----------|\n| IT-06 - Ciudadano no puede validar incidencia (403 Forbidden) | El código de estado de la respuesta es `403` |\n\n### Variables de entorno utilizadas\n\n| Variable | Descripción |\n|----------|-------------|\n| `{{baseUrl}}` | URL base del servidor de la API |\n| `{{incidentId}}` | ID de la incidencia sobre la que se intenta actuar |"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "02 - E2E",
+      "item": [
+        {
+          "name": "E2E-01 — Ciudadano crea incidencia y operador la visualiza",
+          "item": [
+            {
+              "name": "Request 1 — Login ciudadano",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"E2E-01 - Login ciudadano correcto\", function () {",
+                      "    pm.expect(pm.response.code).to.equal(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"dni\": \"{{userDni}}\",\n  \"password\": \"{{userPassword}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Request 2 — Crear incidencia E2E",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"E2E-01 - La incidencia se crea correctamente\", function () {",
+                      "    pm.expect(pm.response.code).to.equal(201);",
+                      "});",
+                      "",
+                      "pm.test(\"E2E-01 - La incidencia tiene estado CREADA\", function () {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json.state.toUpperCase()).to.equal(\"CREADA\");",
+                      "});",
+                      "",
+                      "pm.test(\"E2E-01 - Guardar ID de incidencia\", function () {",
+                      "    const json = pm.response.json();",
+                      "    pm.environment.set(\"incidentId\", json.id);",
+                      "    pm.expect(json.id).to.not.be.undefined;",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"E2E-01 - Farola apagada Postman\",\n  \"description\": \"Incidencia creada desde Postman para el test E2E-01.\",\n  \"category\": \"ALUMBRADO\",\n  \"ubicacion\": {\n    \"municipio\": \"Madrid\",\n    \"calle\": \"Gran Vía\",\n    \"numero\": 12,\n    \"codigoPostal\": 28013,\n    \"latitud\": 40.4204,\n    \"longitud\": -3.7017,\n    \"formattedAddress\": \"Gran Vía 12, 28013 Madrid\",\n    \"placeId\": \"postman-test\"\n  },\n  \"images\": []\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/incidents",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "incidents"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Request 3 — Logout ciudadano",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"E2E-01 - Logout ciudadano correcto\", function () {",
+                      "    pm.expect(pm.response.code).to.equal(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/logout",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "logout"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Request 4 — Login operador",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"E2E-01 - Login operador correcto\", function () {",
+                      "    pm.expect(pm.response.code).to.equal(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"dni\": \"{{operatorDni}}\",\n  \"password\": \"{{operatorPassword}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Request 5 — Operador consulta detalle",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"E2E-01 - Operador consulta detalle correctamente\", function () {",
+                      "    pm.expect(pm.response.code).to.equal(200);",
+                      "});",
+                      "",
+                      "pm.test(\"E2E-01 - El detalle corresponde a la incidencia creada\", function () {",
+                      "    const json = pm.response.json();",
+                      "    const incidentId = Number(pm.environment.get(\"incidentId\"));",
+                      "    pm.expect(json.id).to.equal(incidentId);",
+                      "});",
+                      "",
+                      "pm.test(\"E2E-01 - La incidencia tiene estado CREADA\", function () {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json.state.toUpperCase()).to.equal(\"CREADA\");",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/incidents/{{incidentId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "incidents",
+                    "{{incidentId}}"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ],
+          "description": "Verifica el primer tramo del ciclo de vida de una incidencia: creación por parte de un ciudadano y visualización por parte de un operario.\n\n### Endpoint 1\n\n```\nPOST {{baseUrl}}/api/auth/login\n\n ```\n\n### Descripción\n\nEl ciudadano inicia sesión en el sistema para poder crear una incidencia.\n\n### Headers\n\n| Key | Value |\n| --- | --- |\n| Content-Type | application/json |\n\n### Request Body\n\n``` json\n{  \"dni\": \"{{userDni}}\",  \"password\": \"{{userPassword}}\"}\n\n ```\n\n### Respuesta esperada\n\nStatus: `200 OK`\n\nBody: usuario autenticado con rol `USER`.\n\n### Tests\n\n| Test | Condición |\n| --- | --- |\n| E2E-01 - Login ciudadano correcto | `response.code === 200` |\n\n---\n\n### Endpoint 2\n\n```\nPOST {{baseUrl}}/api/incidents\n\n ```\n\n### Descripción\n\nEl ciudadano crea una nueva incidencia. Se guarda el identificador de la incidencia para utilizarlo en las siguientes peticiones del flujo.\n\n### Headers\n\n| Key | Value |\n| --- | --- |\n| Content-Type | application/json |\n\n### Request Body\n\n``` json\n{  \"title\": \"E2E-01 - Incidencia creada por ciudadano\",  \n   \"description\": \"Incidencia creada durante una prueba end-to-end desde Postman.\",  \n   \"category\": \"ALUMBRADO\", \n   \"ubicacion\": {    \n       \"municipio\": \"Madrid\",\n       \"calle\": \"Calle de Alcalá\",    \n       \"numero\": 25,    \n       \"codigoPostal\": 28014,\n       \"latitud\": 40.4183,\n       \"longitud\": -3.6981,\n       \"formattedAddress\": \"Calle de Alcalá 25, 28014 Madrid\",\n       \"placeId\": \"e2e-01\"  },\n   \"images\": []}\n\n ```\n\n### Variables utilizadas\n\n| Variable | Descripción |\n| --- | --- |\n| `{{baseUrl}}` | URL base del servidor |\n| `{{incidentId}}` | ID de la incidencia creada, guardado tras la respuesta |\n| `{{userDni}}` | DNI del ciudadano |\n| `{{userPassword}}` | Contraseña del ciudadano |\n\n### Respuesta esperada\n\nStatus: `201 Created`\n\nBody: incidencia creada con estado `CREADA`.\n\n### Tests\n\n| Test | Condición |\n| --- | --- |\n| E2E-01 - La incidencia se crea correctamente | `response.code === 201` |\n| E2E-01 - La incidencia tiene estado CREADA | `response.json().state === \"CREADA\"` |\n| E2E-01 - Guardar ID de incidencia | `incidentId = response.json().id` |\n\n---\n\n### Endpoint 3\n\n```\nPOST {{baseUrl}}/api/auth/logout\n\n ```\n\n### Descripción\n\nEl ciudadano cierra sesión para permitir que el siguiente paso se ejecute con rol de operario.\n\n### Headers\n\n| Key | Value |\n| --- | --- |\n| Content-Type | application/json |\n\n### Request Body\n\nNo aplica.\n\n### Respuesta esperada\n\nStatus: `200 OK` o `204 No Content`.\n\n### Tests\n\n| Test | Condición |\n| --- | --- |\n| E2E-01 - Logout ciudadano correcto | `response.code` pertenece a `[200, 204]` |\n\n---\n\n### Endpoint 4\n\n```\nPOST {{baseUrl}}/api/auth/login\n\n ```\n\n### Descripción\n\nEl operario inicia sesión en el sistema para poder consultar la incidencia creada por el ciudadano.\n\n### Headers\n\n| Key | Value |\n| --- | --- |\n| Content-Type | application/json |\n\n### Request Body\n\n```\n{  \"dni\": \"{{operatorDni}}\",  \"password\": \"{{operatorPassword}}\"}\n\n ```\n\n### Variables utilizadas\n\n| Variable | Descripción |\n| --- | --- |\n| `{{operatorDni}}` | DNI del operario |\n| `{{operatorPassword}}` | Contraseña del operario |\n\n### Respuesta esperada\n\nStatus: `200 OK`\n\nBody: usuario autenticado con rol `OPERATOR`.\n\n### Tests\n\n| Test | Condición |\n| --- | --- |\n| E2E-01 - Login operador correcto | `response.code === 200` |\n\n---\n\n### Endpoint 5\n\n```\nGET {{baseUrl}}/api/incidents/{{incidentId}}\n\n ```\n\n### Descripción\n\nEl operario consulta el detalle de la incidencia creada por el ciudadano. Se comprueba que la incidencia consultada es la misma y que mantiene el estado `CREADA`.\n\n### Headers\n\n| Key | Value |\n| --- | --- |\n| Content-Type | application/json |\n\n### Request Body\n\nNo aplica.\n\n### Variables utilizadas\n\n| Variable | Descripción |\n| --- | --- |\n| `{{baseUrl}}` | URL base del servidor |\n| `{{incidentId}}` | ID de la incidencia creada |\n\n### Respuesta esperada\n\nStatus: `200 OK`\n\nBody: incidencia con el mismo `id` que la creada previamente y estado `CREADA`.\n\n### Tests\n\n| Test | Condición |\n| --- | --- |\n| E2E-01 - Operador consulta detalle correctamente | `response.code === 200` |\n| E2E-01 - El detalle corresponde a la incidencia creada | `response.json().id === incidentId` |\n| E2E-01 - La incidencia tiene estado CREADA | `response.json().state === \"CREADA\"` |"
+        },
+        {
+          "name": "E2E-02 — Operador asigna incidencia y técnico la visualiza",
+          "item": [
+            {
+              "name": "Request 1 — Operador valida y asigna",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"E2E-02 - Operador valida la incidencia\", function () {",
+                      "    pm.expect(pm.response.code).to.equal(200);",
+                      "});",
+                      "",
+                      "pm.test(\"E2E-02 - Incidencia asignada a ALUMBRADO\", function () {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json).to.have.property(\"state\");",
+                      "    pm.expect(json).to.have.property(\"assignedTeam\");",
+                      "    pm.expect((json.state || \"\").toUpperCase()).to.equal(\"ASIGNADA\");",
+                      "    pm.expect((json.assignedTeam || \"\").toUpperCase()).to.equal(\"ALUMBRADO\");",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"priority\": \"ALTA\",\n  \"team\": \"ALUMBRADO\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/incidents/{{incidentId}}/operator-validate",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "incidents",
+                    "{{incidentId}}",
+                    "operator-validate"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Request 2 — Logout operador",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('E2E-02 - Logout operador correcto', function () {",
+                      "    pm.expect(pm.response.code).to.equal(200);",
+                      "})"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/logout",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "logout"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Request 3 — Login técnico",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('E2E-02 - Login técnico correcto', function () {",
+                      "    pm.expect(pm.response.code).to.equal(200);",
+                      "})"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"dni\": \"{{technicianDni}}\",\n  \"password\": \"{{technicianPassword}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Request 4 — Técnico ve incidencias de su equipo",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"E2E-02 - El técnico ve incidencias de su equipo\", function () {",
+                      "    pm.expect(pm.response.code).to.equal(200);",
+                      "});",
+                      "",
+                      "pm.test(\"E2E-02 - La incidencia asignada aparece para el técnico\", function () {",
+                      "    const incidents = pm.response.json();",
+                      "    const incidentId = String(pm.environment.get(\"incidentId\")).trim();",
+                      "    const found = incidents.some(incident => String(incident.id) === incidentId);",
+                      "    pm.expect(found).to.be.true;",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/incidents/team/my",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "incidents",
+                    "team",
+                    "my"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ],
+          "description": "Verifica que el operario puede validar una incidencia creada y asignarla a un equipo técnico.\n\n### Endpoint\n\n```\nPATCH {{baseUrl}}/api/incidents/{{incidentId}}/operator-validate\n\n ```\n\nPartiendo de una incidencia en estado `CREADA`, el operario le asigna una prioridad y un equipo técnico. Se espera que el estado pase a `ASIGNADA` y que el equipo asignado sea `ALUMBRADO`.\n\n### Headers\n\n| Key | Value |\n| --- | --- |\n| Content-Type | application/json |\n\n### Request Body\n\n``` json\n{  \"priority\": \"ALTA\",  \"team\": \"ALUMBRADO\"}\n\n ```\n\n### Variables utilizadas\n\n| Variable | Descripción |\n| --- | --- |\n| `{{baseUrl}}` | URL base del servidor |\n| `{{incidentId}}` | ID de la incidencia creada en E2E-01 |\n| `{{operatorDni}}` | DNI del operario |\n| `{{operatorPassword}}` | Contraseña del operario |\n\n### Respuesta esperada\n\nStatus: `200 OK`\n\nBody: incidencia con `state` igual a `\"ASIGNADA\"` y `assignedTeam` igual a `\"ALUMBRADO\"`.\n\n### Tests\n\n| Test | Condición |\n| --- | --- |\n| E2E-02 - Operador valida la incidencia | `response.code === 200` |\n| E2E-02 - Incidencia asignada a ALUMBRADO | `response.json().state === \"ASIGNADA\"` y `response.json().assignedTeam === \"ALUMBRADO\"` |\n\n---\n\n## E2E-02B — Técnico visualiza incidencia asignada\n\nVerifica que el técnico del equipo asignado puede ver la incidencia en su listado.\n\n### Endpoint 1\n\n```\nPOST {{baseUrl}}/api/auth/logout\n\n ```\n\n### Descripción\n\nEl operario cierra sesión para permitir iniciar sesión como técnico.\n\n### Headers\n\n| Key | Value |\n| --- | --- |\n| Content-Type | application/json |\n\n### Request Body\n\nNo aplica.\n\n### Respuesta esperada\n\nStatus: `200 OK` o `204 No Content`.\n\n### Tests\n\n| Test | Condición |\n| --- | --- |\n| E2E-02B - Logout operador correcto | `response.code` pertenece a `[200, 204]` |\n\n---\n\n### Endpoint 2\n\n```\nPOST {{baseUrl}}/api/auth/login\n\n ```\n\n### Descripción\n\nEl técnico del equipo `ALUMBRADO` inicia sesión.\n\n### Headers\n\n| Key | Value |\n| --- | --- |\n| Content-Type | application/json |\n\n### Request Body\n\n``` json\n{  \"dni\": \"{{technicianDni}}\",  \"password\": \"{{technicianPassword}}\"}\n\n ```\n\n### Variables utilizadas\n\n| Variable | Descripción |\n| --- | --- |\n| `{{technicianDni}}` | DNI del técnico |\n| `{{technicianPassword}}` | Contraseña del técnico |\n\n### Respuesta esperada\n\nStatus: `200 OK`\n\nBody: usuario autenticado con rol `TECHNICIAN`.\n\n### Tests\n\n| Test | Condición |\n| --- | --- |\n| E2E-02B - Login técnico correcto | `response.code === 200` |\n| E2E-02B - Usuario autenticado es TECHNICIAN | `response.json().role.toUpperCase() === \"TECHNICIAN\"` |\n\n---\n\n### Endpoint 3\n\n```\nGET {{baseUrl}}/api/incidents/team/my\n\n ```\n\n### Descripción\n\nEl técnico consulta las incidencias asignadas a su equipo. Se comprueba que aparece la incidencia asignada previamente por el operario.\n\n### Headers\n\n| Key | Value |\n| --- | --- |\n| Content-Type | application/json |\n\n### Request Body\n\nNo aplica.\n\n### Variables utilizadas\n\n| Variable | Descripción |\n| --- | --- |\n| `{{baseUrl}}` | URL base del servidor |\n| `{{incidentId}}` | ID de la incidencia asignada |\n\n### Respuesta esperada\n\nStatus: `200 OK`\n\nBody: array JSON con las incidencias del equipo técnico. Debe contener la incidencia cuyo `id` coincide con `{{incidentId}}`.\n\n### Tests\n\n| Test | Condición |\n| --- | --- |\n| E2E-02B - Técnico consulta incidencias de su equipo | `response.code === 200` |\n| E2E-02B - La incidencia asignada aparece para el técnico | Algún elemento del array tiene `id === incidentId` |\n\n---"
+        },
+        {
+          "name": "E2E-03A — Técnico resuelve incidencia y operador comprueba resultado",
+          "item": [
+            {
+              "name": "Request 1 — Técnico pasa a EN_CURSO",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"E2E-03A - Técnico pasa incidencia a EN_CURSO\", function () {",
+                      "    pm.expect(pm.response.code).to.equal(200);",
+                      "});",
+                      "",
+                      "pm.test(\"E2E-03A - Estado EN_CURSO correcto\", function () {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json.state.toUpperCase()).to.equal(\"EN_CURSO\");",
+                      "});"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"state\": \"EN_CURSO\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/incidents/{{incidentId}}/team-state",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "incidents",
+                    "{{incidentId}}",
+                    "team-state"
+                  ]
+                },
+                "description": "Generated from cURL: curl -X POST {{baseUrl}}/api/auth/login -H \"Content-Type: application/json\" -d '{\"dni\": \"{{technicianDni}}\", \"password\": \"{{technicianPassword}}\"}'"
+              },
+              "response": []
+            },
+            {
+              "name": "Request 2 — Técnico crea informe",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"E2E-03A - Informe técnico creado\", function () {",
+                      "    pm.expect(pm.response.code).to.equal(200);",
+                      "});",
+                      "",
+                      "pm.test(\"E2E-03A - La respuesta incluye informe técnico\", function () {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json.report).to.not.be.undefined;",
+                      "});"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"description\": \"Se revisa la incidencia Valla de protección rota - Madrid. La valla presenta daños visibles y se propone su reparación para garantizar la seguridad de los peatones.\",\n  \"images\": [\n    {\n      \"filename\": \"valla-rota.jpg\",\n      \"mimeType\": \"image/jpeg\",\n      \"imageData\": \"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2w==\",\n      \"fileSize\": 12345\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/incidents/{{incidentId}}/report",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "incidents",
+                    "{{incidentId}}",
+                    "report"
+                  ]
+                },
+                "description": "Generated from cURL: curl --request PATCH --url '{{baseUrl}}/api/incidents/{{incidentId}}/team-state' --header 'Content-Type: application/json' --data '{\"state\": \"EN_CURSO\"}'"
+              },
+              "response": []
+            },
+            {
+              "name": "Request 3 — Técnico resuelve incidencia",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"E2E-03A - Técnico resuelve incidencia\", function () {",
+                      "    pm.expect(pm.response.code).to.equal(200);",
+                      "});",
+                      "",
+                      "pm.test(\"E2E-03A - Estado RESUELTA correcto\", function () {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json.state.toUpperCase()).to.equal(\"RESUELTA\");",
+                      "});"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"state\": \"RESUELTA\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/incidents/{{incidentId}}/team-state",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "incidents",
+                    "{{incidentId}}",
+                    "team-state"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Request 4 — Logout técnico",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      ""
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/logout",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "logout"
+                  ]
+                },
+                "description": "Generated from cURL: curl -X POST {{baseUrl}}/api/auth/logout"
+              },
+              "response": []
+            },
+            {
+              "name": "Request 5 — Login operador",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"E2E-03A - Login operario correcto\", function () {",
+                      "    pm.expect(pm.response.code).to.equal(200);",
+                      "});",
+                      "",
+                      "pm.test(\"E2E-03A - Usuario autenticado es OPERATOR\", function () {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json.role.toUpperCase()).to.equal(\"OPERATOR\");",
+                      "});"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"dni\": \"{{operatorDni}}\",\n  \"password\": \"{{operatorPassword}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "Generated from cURL: curl -X POST {{baseUrl}}/api/auth/login -H \"Content-Type: application/json\" -d '{\"dni\": \"{{adminDni}}\", \"password\": \"{{adminPassword}}\"}'"
+              },
+              "response": []
+            },
+            {
+              "name": "Request 6 — Operador consulta detalle",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"E2E-03A - Operador consulta incidencia\", function () {",
+                      "    pm.expect(pm.response.code).to.equal(200);",
+                      "});",
+                      "",
+                      "pm.test(\"E2E-03A - Operador ve la incidencia RESUELTA\", function () {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json.state.toUpperCase()).to.equal(\"RESUELTA\");",
+                      "});"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/incidents/{{incidentId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "incidents",
+                    "{{incidentId}}"
+                  ]
+                },
+                "description": "Generated from cURL: curl -X GET {{baseUrl}}/api/incidents/{{incidentId}}"
+              },
+              "response": []
+            },
+            {
+              "name": "Request 7 — Operario acepta la resolución y cierra la incidencia",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"E2E-03A - Operario acepta la resolución\", function () {",
+                      "    pm.expect(pm.response.code).to.equal(200);",
+                      "});",
+                      "",
+                      "pm.test(\"E2E-03A - La incidencia queda CERRADA\", function () {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json.state).to.not.be.undefined;",
+                      "    pm.expect(json.state.toUpperCase()).to.equal(\"CERRADA\");",
+                      "});"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"approved\": true,\n  \"comment\": \"La resolución técnica se considera correcta. Se cierra la incidencia.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/incidents/{{incidentId}}/review-resolution",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "incidents",
+                    "{{incidentId}}",
+                    "review-resolution"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Request 8 — Operario cierra la incidencia",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"E2E-03A - Se consulta el detalle final\", function () {",
+                      "    pm.expect(pm.response.code).to.equal(200);",
+                      "});",
+                      "",
+                      "pm.test(\"E2E-03A - La incidencia permanece CERRADA\", function () {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json.state).to.not.be.undefined;",
+                      "    pm.expect(json.state.toUpperCase()).to.equal(\"CERRADA\");",
+                      "});"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/incidents/{{incidentId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "incidents",
+                    "{{incidentId}}"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ],
+          "description": "Verifica el flujo positivo de resolución: el técnico trabaja la incidencia, la marca como resuelta y el operario acepta la resolución cerrándola.\n\n### Endpoint 1\n\n```\nPATCH {{baseUrl}}/api/incidents/{{incidentId}}/team-state\n\n ```\n\n### Descripción\n\nEl técnico cambia el estado de la incidencia a `EN_CURSO`, indicando que ha comenzado a trabajar en ella.\n\n### Headers\n\n| Key | Value |\n| --- | --- |\n| Content-Type | application/json |\n\n### Request Body\n\n``` json\n{  \"state\": \"EN_CURSO\"}\n\n ```\n\n### Variables utilizadas\n\n| Variable | Descripción |\n| --- | --- |\n| `{{baseUrl}}` | URL base del servidor |\n| `{{incidentId}}` | ID de la incidencia asignada |\n| `{{technicianDni}}` | DNI del técnico |\n| `{{technicianPassword}}` | Contraseña del técnico |\n\n### Respuesta esperada\n\nStatus: `200 OK`\n\nBody: incidencia con `state` igual a `\"EN_CURSO\"`.\n\n### Tests\n\n| Test | Condición |\n| --- | --- |\n| E2E-03A - Técnico pasa incidencia a EN_CURSO | `response.code === 200` |\n| E2E-03A - Estado EN_CURSO correcto | `response.json().state.toUpperCase() === \"EN_CURSO\"` |\n\n---\n\n### Endpoint 2\n\n```\nPOST {{baseUrl}}/api/incidents/{{incidentId}}/report\n\n ```\n\n### Descripción\n\nEl técnico crea un informe técnico indicando la actuación realizada. El informe debe incluir una descripción y al menos una imagen, ya que el backend no acepta informes sin imágenes.\n\n### Headers\n\n| Key | Value |\n| --- | --- |\n| Content-Type | application/json |\n\n### Request Body\n\n``` json\n{  \"description\": \"Se revisa la incidencia. El elemento afectado presenta daños visibles y se propone su reparación para garantizar la seguridad de los peatones.\",  \n   \"images\": [    {      \n        \"filename\": \"incidencia-reparada.jpg\",      \n        \"mimeType\": \"image/jpeg\",      \n        \"imageData\": \"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2w==\",  \n        \"fileSize\": 12345    }  ]\n}\n\n ```\n\n### Variables utilizadas\n\n| Variable | Descripción |\n| --- | --- |\n| `{{baseUrl}}` | URL base del servidor |\n| `{{incidentId}}` | ID de la incidencia en curso |\n\n### Respuesta esperada\n\nStatus: `200 OK`\n\nBody: incidencia actualizada con informe técnico asociado.\n\n### Tests\n\n| Test | Condición |\n| --- | --- |\n| E2E-03A - Informe técnico creado | `response.code === 200` |\n\n---\n\n### Endpoint 3\n\n```\nPATCH {{baseUrl}}/api/incidents/{{incidentId}}/team-state\n\n ```\n\n### Descripción\n\nTras crear el informe técnico, el técnico marca la incidencia como `RESUELTA`.\n\n### Headers\n\n| Key | Value |\n| --- | --- |\n| Content-Type | application/json |\n\n### Request Body\n\n``` json\n{  \"state\": \"RESUELTA\"}\n\n ```\n\n### Variables utilizadas\n\n| Variable | Descripción |\n| --- | --- |\n| `{{baseUrl}}` | URL base del servidor |\n| `{{incidentId}}` | ID de la incidencia con informe técnico |\n\n### Respuesta esperada\n\nStatus: `200 OK`\n\nBody: incidencia con `state` igual a `\"RESUELTA\"`.\n\n### Tests\n\n| Test | Condición |\n| --- | --- |\n| E2E-03A - Técnico marca la incidencia como RESUELTA | `response.code === 200` |\n| E2E-03A - Estado RESUELTA correcto | `response.json().state.toUpperCase() === \"RESUELTA\"` |\n\n---\n\n### Endpoint 4\n\n```\nPOST {{baseUrl}}/api/auth/logout\n\n ```\n\n### Descripción\n\nEl técnico cierra sesión para que el operario pueda revisar la resolución.\n\n### Headers\n\n| Key | Value |\n| --- | --- |\n| Content-Type | application/json |\n\n### Request Body\n\nNo aplica.\n\n### Respuesta esperada\n\nStatus: `200 OK` o `204 No Content`.\n\n### Tests\n\n| Test | Condición |\n| --- | --- |\n| E2E-03A - Logout técnico correcto | `response.code` pertenece a `[200, 204]` |\n\n---\n\n### Endpoint 5\n\n```\nPOST {{baseUrl}}/api/auth/login\n\n ```\n\n### Descripción\n\nEl operario inicia sesión para revisar la incidencia resuelta por el técnico.\n\n### Headers\n\n| Key | Value |\n| --- | --- |\n| Content-Type | application/json |\n\n### Request Body\n\n``` json\n{  \"dni\": \"{{operatorDni}}\",  \"password\": \"{{operatorPassword}}\"}\n\n ```\n\n### Variables utilizadas\n\n| Variable | Descripción |\n| --- | --- |\n| `{{operatorDni}}` | DNI del operario |\n| `{{operatorPassword}}` | Contraseña del operario |\n\n### Respuesta esperada\n\nStatus: `200 OK`\n\nBody: usuario autenticado con rol `OPERATOR`.\n\n### Tests\n\n| Test | Condición |\n| --- | --- |\n| E2E-03A - Login operario correcto | `response.code === 200` |\n| E2E-03A - Usuario autenticado es OPERATOR | `response.json().role.toUpperCase() === \"OPERATOR\"` |\n\n---\n\n### Endpoint 6\n\n```\nPATCH {{baseUrl}}/api/incidents/{{incidentId}}/review-resolution\n\n ```\n\n### Descripción\n\nEl operario acepta la resolución técnica. Como consecuencia, la incidencia debe pasar de `RESUELTA` a `CERRADA`.\n\n### Headers\n\n| Key | Value |\n| --- | --- |\n| Content-Type | application/json |\n\n### Request Body\n\n``` json\n{  \"approved\": true,  \n   \"comment\": \"La resolución técnica se considera correcta. Se cierra la incidencia.\"\n}\n\n ```\n\n### Variables utilizadas\n\n| Variable | Descripción |\n| --- | --- |\n| `{{baseUrl}}` | URL base del servidor |\n| `{{incidentId}}` | ID de la incidencia resuelta |\n\n### Respuesta esperada\n\nStatus: `200 OK`\n\nBody: incidencia con `state` igual a `\"CERRADA\"`.\n\n### Tests\n\n| Test | Condición |\n| --- | --- |\n| E2E-03A - Operario acepta la resolución | `response.code === 200` |\n| E2E-03A - La incidencia queda CERRADA | `response.json().state.toUpperCase() === \"CERRADA\"` |"
+        },
+        {
+          "name": "E2E-03B — Técnico resuelve y operario rechaza",
+          "item": [
+            {
+              "name": "Request 1 — Técnico pasa a EN_CURSO",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"E2E-03A - Técnico pasa incidencia a EN_CURSO\", function () {",
+                      "    pm.expect(pm.response.code).to.equal(200);",
+                      "});",
+                      "",
+                      "pm.test(\"E2E-03A - Estado EN_CURSO correcto\", function () {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json.state.toUpperCase()).to.equal(\"EN_CURSO\");",
+                      "});"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"state\": \"EN_CURSO\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/incidents/{{incidentId}}/team-state",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "incidents",
+                    "{{incidentId}}",
+                    "team-state"
+                  ]
+                },
+                "description": "Generated from cURL: curl -X POST {{baseUrl}}/api/auth/login -H \"Content-Type: application/json\" -d '{\"dni\": \"{{technicianDni}}\", \"password\": \"{{technicianPassword}}\"}'"
+              },
+              "response": []
+            },
+            {
+              "name": "Request 2 — Técnico crea informe",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"E2E-03A - Informe técnico creado\", function () {",
+                      "    pm.expect(pm.response.code).to.equal(200);",
+                      "});",
+                      "",
+                      "pm.test(\"E2E-03A - La respuesta incluye informe técnico\", function () {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json.report).to.not.be.undefined;",
+                      "});"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"description\": \"Se revisa la incidencia Valla de protección rota - Madrid. La valla presenta daños visibles y se propone su reparación para garantizar la seguridad de los peatones.\",\n  \"images\": [\n    {\n      \"filename\": \"valla-rota.jpg\",\n      \"mimeType\": \"image/jpeg\",\n      \"imageData\": \"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2w==\",\n      \"fileSize\": 12345\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/incidents/{{incidentId}}/report",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "incidents",
+                    "{{incidentId}}",
+                    "report"
+                  ]
+                },
+                "description": "Generated from cURL: curl --request PATCH --url '{{baseUrl}}/api/incidents/{{incidentId}}/team-state' --header 'Content-Type: application/json' --data '{\"state\": \"EN_CURSO\"}'"
+              },
+              "response": []
+            },
+            {
+              "name": "Request 3 — Técnico resuelve incidencia",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"E2E-03A - Técnico resuelve incidencia\", function () {",
+                      "    pm.expect(pm.response.code).to.equal(200);",
+                      "});",
+                      "",
+                      "pm.test(\"E2E-03A - Estado RESUELTA correcto\", function () {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json.state.toUpperCase()).to.equal(\"RESUELTA\");",
+                      "});"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"state\": \"RESUELTA\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/incidents/{{incidentId}}/team-state",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "incidents",
+                    "{{incidentId}}",
+                    "team-state"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Request 4 — Logout técnico",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      ""
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/logout",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "logout"
+                  ]
+                },
+                "description": "Generated from cURL: curl -X POST {{baseUrl}}/api/auth/logout"
+              },
+              "response": []
+            },
+            {
+              "name": "Request 5 — Login operador",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"E2E-03A - Login operario correcto\", function () {",
+                      "    pm.expect(pm.response.code).to.equal(200);",
+                      "});",
+                      "",
+                      "pm.test(\"E2E-03A - Usuario autenticado es OPERATOR\", function () {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json.role.toUpperCase()).to.equal(\"OPERATOR\");",
+                      "});"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"dni\": \"{{operatorDni}}\",\n  \"password\": \"{{operatorPassword}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "Generated from cURL: curl -X POST {{baseUrl}}/api/auth/login -H \"Content-Type: application/json\" -d '{\"dni\": \"{{adminDni}}\", \"password\": \"{{adminPassword}}\"}'"
+              },
+              "response": []
+            },
+            {
+              "name": "Request 6 — Operador consulta detalle",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"E2E-03A - Operador consulta incidencia\", function () {",
+                      "    pm.expect(pm.response.code).to.equal(200);",
+                      "});",
+                      "",
+                      "pm.test(\"E2E-03A - Operador ve la incidencia RESUELTA\", function () {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json.state.toUpperCase()).to.equal(\"RESUELTA\");",
+                      "});"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/incidents/{{incidentId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "incidents",
+                    "{{incidentId}}"
+                  ]
+                },
+                "description": "Generated from cURL: curl -X GET {{baseUrl}}/api/incidents/{{incidentId}}"
+              },
+              "response": []
+            },
+            {
+              "name": "Request 7 — Operario rechaza la resolución",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"E2E-03B - Operario rechaza la resolución\", function () {",
+                      "    pm.expect(pm.response.code).to.equal(200);",
+                      "});",
+                      "",
+                      "pm.test(\"E2E-03B - La incidencia vuelve a EN_CURSO\", function () {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json.state).to.not.be.undefined;",
+                      "    pm.expect(json.state.toUpperCase()).to.equal(\"EN_CURSO\");",
+                      "});"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"approved\": false,\n  \"comment\": \"La resolución no es suficiente. La incidencia debe revisarse de nuevo.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/incidents/{{incidentId}}/review-resolution",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "incidents",
+                    "{{incidentId}}",
+                    "review-resolution"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ],
+          "description": "Verifica el flujo alternativo: el técnico marca una incidencia como resuelta, pero el operario rechaza la resolución y la devuelve a `EN_CURSO`.\n\n### Endpoint\n\n```\nPATCH {{baseUrl}}/api/incidents/{{incidentId}}/review-resolution\n\n ```\n\n### Descripción\n\nEl operario rechaza la resolución técnica por considerarla insuficiente. Como consecuencia, la incidencia debe volver de `RESUELTA` a `EN_CURSO`.\n\n### Headers\n\n| Key | Value |\n| --- | --- |\n| Content-Type | application/json |\n\n### Request Body\n\n``` json\n{  \"approved\": false,  \n   \"comment\": \"La resolución no es suficiente. La incidencia debe revisarse de nuevo.\"\n}\n\n ```\n\n### Variables utilizadas\n\n| Variable | Descripción |\n| --- | --- |\n| `{{baseUrl}}` | URL base del servidor |\n| `{{incidentId}}` | ID de una incidencia en estado `RESUELTA` |\n\n### Respuesta esperada\n\nStatus: `200 OK`\n\nBody: incidencia con `state` igual a `\"EN_CURSO\"`.\n\n### Tests\n\n| Test | Condición |\n| --- | --- |\n| E2E-03B - Operario rechaza la resolución | `response.code === 200` |\n| E2E-03B - La incidencia vuelve a EN_CURSO | `response.json().state.toUpperCase() === \"EN_CURSO\"` |"
+        },
+        {
+          "name": "E2E-04 — Flujo negativo de permisos",
+          "item": [
+            {
+              "name": "Request 1 — Logout admin",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/logout",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "logout"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Request 2 — Login ciudadano",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"dni\": \"{{userDni}}\",\n  \"password\": \"{{userPassword}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Request 3 — Ciudadano intenta validar como operador",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"E2E-04 - Ciudadano no puede validar como operador\", function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+                      "});"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"priority\": \"ALTA\",\n  \"team\": \"ALUMBRADO\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/incidents/{{incidentId}}/operator-validate",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "incidents",
+                    "{{incidentId}}",
+                    "operator-validate"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ],
+          "description": "Verifica que un ciudadano no puede realizar acciones reservadas a operarios.\n\n### Endpoint 1\n\n```\nPOST {{baseUrl}}/api/auth/login\n\n ```\n\n### Descripción\n\nEl ciudadano inicia sesión en el sistema.\n\n### Headers\n\n| Key | Value |\n| --- | --- |\n| Content-Type | application/json |\n\n### Request Body\n\n``` json\n{  \"dni\": \"{{userDni}}\",  \"password\": \"{{userPassword}}\"}\n\n ```\n\n### Respuesta esperada\n\nStatus: `200 OK`\n\nBody: usuario autenticado con rol `USER`.\n\n### Tests\n\n| Test | Condición |\n| --- | --- |\n| E2E-04 - Login ciudadano correcto | `response.code === 200` |\n\n---\n\n### Endpoint 2\n\n```\nPATCH {{baseUrl}}/api/incidents/{{incidentId}}/operator-validate\n\n ```\n\n### Descripción\n\nEl ciudadano intenta validar una incidencia como si fuera operario. El sistema debe bloquear la acción por falta de permisos.\n\n### Headers\n\n| Key | Value |\n| --- | --- |\n| Content-Type | application/json |\n\n### Request Body\n\n``` json\n{  \"priority\": \"ALTA\",  \"team\": \"ALUMBRADO\"}\n\n ```\n\n### Variables utilizadas\n\n| Variable | Descripción |\n| --- | --- |\n| `{{baseUrl}}` | URL base del servidor |\n| `{{incidentId}}` | ID de la incidencia sobre la que se intenta actuar |\n| `{{userDni}}` | DNI del ciudadano |\n| `{{userPassword}}` | Contraseña del ciudadano |\n\n### Respuesta esperada\n\nStatus: `401 Unauthorized` o `403 Forbidden`.\n\nBody: mensaje de error o respuesta vacía según la configuración de seguridad.\n\n### Tests\n\n| Test | Condición |\n| --- | --- |\n| E2E-04 - Ciudadano no puede validar como operador | `response.code` pertenece a `[401, 403]` |"
+        }
+      ]
+    }
+  ]
+}
