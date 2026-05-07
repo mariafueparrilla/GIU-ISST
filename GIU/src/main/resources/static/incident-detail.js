@@ -4,6 +4,17 @@ let map = null;
 let reportDraftImages = [];
 let suppressOperatorReviewBlock = false;
 
+const leafletZIndexFix = document.createElement("style");
+leafletZIndexFix.textContent = `
+  .leaflet-container,
+  .leaflet-pane,
+  .leaflet-top,
+  .leaflet-bottom {
+    z-index: 0 !important;
+  }
+`;
+document.head.appendChild(leafletZIndexFix);
+
 const roleMap = {
   admin: "Admin",
   user: "Usuario",
@@ -551,8 +562,8 @@ function renderIncidentDetail() {
           ` : ''}
         </div>
 
-        <div id="detail-report-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/60 px-4">
-          <div class="w-full max-w-3xl rounded-3xl bg-white shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+        <div id="detail-report-modal" class="fixed inset-0 z-[9999] hidden items-center justify-center bg-slate-950/60 px-4">
+          <div class="relative z-[10000] w-full max-w-3xl rounded-3xl bg-white shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
             <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 flex-shrink-0">
               <div>
                 <h2 class="text-xl font-bold text-slate-900">Rellenar informe</h2>
