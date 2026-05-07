@@ -145,7 +145,7 @@ function renderReportImagePreviews() {
   if (!container) return;
 
   if (reportDraftImages.length === 0) {
-    container.innerHTML = '<p class="text-sm text-slate-400">Todavia no has seleccionado imagenes.</p>';
+    container.innerHTML = '<p class="text-sm text-slate-400">Todavia no has seleccionado imágenes.</p>';
     return;
   }
 
@@ -213,7 +213,7 @@ async function addDetailReportImages(files) {
     }
 
     if (reportDraftImages.length >= 3) {
-      alert("El informe admite como maximo 3 imagenes");
+      alert("El informe admite como máximo 3 imágenes");
       break;
     }
 
@@ -281,7 +281,7 @@ async function submitTechnicianDetailReport() {
     });
 
     if (!resolveResponse.ok) {
-      let message = "El informe se guardo, pero no se pudo marcar la incidencia como resuelta";
+      let message = "El informe se guardó, pero no se pudo marcar la incidencia como resuelta";
       try {
         const errorData = await resolveResponse.json();
         if (errorData.message) message = errorData.message;
@@ -364,7 +364,7 @@ function renderIncidentDetail() {
 
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
               <div>
-                <p class="text-slate-500 font-medium">Categoria</p>
+                <p class="text-slate-500 font-medium">Categoría</p>
                 <p class="text-slate-900">${incidentDetail.category?.toUpperCase() || 'N/A'}</p>
               </div>
               <div>
@@ -372,7 +372,7 @@ function renderIncidentDetail() {
                 <p class="text-slate-900">${incidentDetail.creatorDni || incidentDetail.creatorName}</p>
               </div>
               <div>
-                <p class="text-slate-500 font-medium">Fecha de creacion</p>
+                <p class="text-slate-500 font-medium">Fecha de creación</p>
                 <p class="text-slate-900">${formatDate(incidentDetail.creationInstant)}</p>
               </div>
               <div>
@@ -382,15 +382,15 @@ function renderIncidentDetail() {
             </div>
           </div>
 
-          <!-- Imagenes -->
+          <!-- Imágenes -->
           <div class="bg-white rounded-2xl p-6 shadow-sm mb-6 border border-slate-200">
-            <h2 class="text-xl font-bold text-slate-900 mb-4">Imagenes</h2>
+            <h2 class="text-xl font-bold text-slate-900 mb-4">Imágenes</h2>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
               ${previewImages}
             </div>
           </div>
 
-          <!-- Ubicacion y mapa -->
+          <!-- Ubicación y mapa -->
           <div class="bg-white rounded-2xl p-6 shadow-sm mb-6 border border-slate-200">
             <h2 class="text-xl font-bold text-slate-900 mb-4">Ubicacion</h2>
             
@@ -406,11 +406,11 @@ function renderIncidentDetail() {
                     <p class="text-slate-900">${incidentDetail.ubicacion.calle}, ${incidentDetail.ubicacion.numero}</p>
                   </div>
                   <div>
-                    <p class="text-slate-500 font-medium">Codigo postal</p>
+                    <p class="text-slate-500 font-medium">Código postal</p>
                     <p class="text-slate-900">${incidentDetail.ubicacion.codigoPostal}</p>
                   </div>
                   <div>
-                    <p class="text-slate-500 font-medium">Direccion formateada</p>
+                    <p class="text-slate-500 font-medium">Dirección formateada</p>
                     <p class="text-slate-900">${incidentDetail.ubicacion.formattedAddress || 'No disponible'}</p>
                   </div>
                   <div>
@@ -436,11 +436,11 @@ function renderIncidentDetail() {
                 <p class="text-slate-900">${formatDate(incidentDetail.creationInstant)} - ${incidentDetail.creatorDni || incidentDetail.creatorName || '-'}</p>
               </div>
               ${incidentDetail.asignationDate ? `<div>
-                <p class="text-slate-500 font-medium">Asignacion</p>
+                <p class="text-slate-500 font-medium">Asignación</p>
                 <p class="text-slate-900">${formatDate(incidentDetail.asignationDate)} - ${incidentDetail.assignerDni || '-'}</p>
               </div>` : ''}
               ${incidentDetail.resolutionDate ? `<div>
-                <p class="text-slate-500 font-medium">Resolucion</p>
+                <p class="text-slate-500 font-medium">Resolución</p>
                 <p class="text-slate-900">${formatDate(incidentDetail.resolutionDate)} - ${incidentDetail.resolverDni || '-'}</p>
               </div>` : ''}
               ${incidentDetail.rejectionDate ? `<div>
@@ -455,17 +455,17 @@ function renderIncidentDetail() {
           </div>
 
           ${incidentDetail.report ? `
-          <!-- Informe tecnico -->
+          <!-- Informe técnico -->
           <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 mb-6">
             <div class="flex items-start justify-between gap-4 mb-4">
               <div>
-                <h2 class="text-xl font-bold text-slate-900">Informe tecnico</h2>
+                <h2 class="text-xl font-bold text-slate-900">Informe técnico</h2>
                 <p class="text-sm text-slate-500 mt-1">${formatDate(incidentDetail.report.reportInstant)} - ${incidentDetail.report.senderName || incidentDetail.report.senderDni || '-'}</p>
               </div>
-              <span class="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">Reporte del tecnico</span>
+              <span class="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">Reporte del técnico</span>
             </div>
 
-            ${incidentDetail.report.description ? `<p class="text-slate-700 mb-4 whitespace-pre-line">${incidentDetail.report.description}</p>` : `<p class="text-slate-400 mb-4">Sin descripcion adicional</p>`}
+            ${incidentDetail.report.description ? `<p class="text-slate-700 mb-4 whitespace-pre-line">${incidentDetail.report.description}</p>` : `<p class="text-slate-400 mb-4">Sin descripción adicional</p>`}
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
               ${(incidentDetail.report.images || []).map((img, idx) => `
@@ -490,13 +490,13 @@ function renderIncidentDetail() {
 
           ${currentUser?.role === 'operator' && incidentDetail.state === 'resuelta' ? `
           <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 mb-6">
-            <h2 class="text-xl font-bold text-slate-900 mb-4">Revision de resolucion</h2>
-            <p class="text-sm text-slate-500 mb-4">Comprueba el informe tecnico antes de confirmar o rechazar la resolucion.</p>
+            <h2 class="text-xl font-bold text-slate-900 mb-4">Revisión de resolución</h2>
+            <p class="text-sm text-slate-500 mb-4">Comprueba el informe técnico antes de confirmar o rechazar la resolución.</p>
 
             <div class="space-y-4">
               <div>
                 <label class="block text-sm font-semibold text-slate-700 mb-2" for="operator-review-comment">Motivo del rechazo</label>
-                <textarea id="operator-review-comment" rows="4" class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-surface-50 text-sm text-slate-700" placeholder="Escribe por que la incidencia vuelve al equipo técnico"></textarea>
+                <textarea id="operator-review-comment" rows="4" class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-surface-50 text-sm text-slate-700" placeholder="Escribe por qué la incidencia vuelve al equipo técnico"></textarea>
               </div>
 
               <div class="flex flex-wrap gap-3">
@@ -556,7 +556,7 @@ function renderIncidentDetail() {
           ${currentUser?.role === 'technician' && incidentDetail.state === 'en_curso' ? `
           <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 mb-6">
             <h2 class="text-xl font-bold text-slate-900 mb-2">Accion tecnica</h2>
-            <p class="text-sm text-slate-500 mb-4">Completa el informe tecnico para marcar la incidencia como resuelta.</p>
+            <p class="text-sm text-slate-500 mb-4">Completa el informe técnico para marcar la incidencia como resuelta.</p>
             <button id="tech-fill-report-btn" type="button" class="px-4 py-3 rounded-xl text-white font-semibold" style="background:#1468f5;">Rellenar informe</button>
           </div>
           ` : ''}
@@ -567,7 +567,7 @@ function renderIncidentDetail() {
             <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 flex-shrink-0">
               <div>
                 <h2 class="text-xl font-bold text-slate-900">Rellenar informe</h2>
-                <p class="text-sm text-slate-500">Completa el informe tecnico antes de marcar la incidencia como resuelta.</p>
+                <p class="text-sm text-slate-500">Completa el informe técnico antes de marcar la incidencia como resuelta.</p>
               </div>
               <button id="detail-report-close" type="button" class="text-slate-500 hover:text-slate-900">
                 <i data-lucide="x" style="width:20px;height:20px;"></i>
@@ -576,18 +576,18 @@ function renderIncidentDetail() {
 
             <div class="p-6 space-y-5 overflow-y-auto flex-1">
               <div>
-                <label for="detail-report-description" class="block text-sm font-semibold text-slate-700 mb-2">Descripcion del informe</label>
+                <label for="detail-report-description" class="block text-sm font-semibold text-slate-700 mb-2">Descripción del informe</label>
                 <textarea id="detail-report-description" rows="4" class="w-full px-4 py-3 rounded-2xl border border-slate-300 bg-white text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-200" placeholder="Describe brevemente lo que has comprobado o reparado"></textarea>
               </div>
 
               <div>
-                <label for="detail-report-images-input" class="block text-sm font-semibold text-slate-700 mb-2">Imagenes obligatorias</label>
+                <label for="detail-report-images-input" class="block text-sm font-semibold text-slate-700 mb-2">Imágenes obligatorias</label>
                 <input id="detail-report-images-input" type="file" accept="image/*" multiple class="block w-full text-sm text-slate-600 file:mr-4 file:rounded-xl file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100" />
-                <p class="mt-2 text-xs text-slate-400">Minimo 1 y maximo 3 imagenes.</p>
+                <p class="mt-2 text-xs text-slate-400">Minimo 1 y máximo 3 imágenes.</p>
               </div>
 
               <div>
-                <p class="text-sm font-semibold text-slate-700 mb-3">Previsualizacion</p>
+                <p class="text-sm font-semibold text-slate-700 mb-3">Previsualización</p>
                 <div id="detail-report-image-previews" class="grid grid-cols-1 sm:grid-cols-3 gap-3"></div>
               </div>
             </div>
@@ -728,7 +728,7 @@ function attachDetailEvents() {
     rejectResolutionBtn.addEventListener("click", async () => {
       const comment = reviewComment?.value?.trim() || '';
       if (!comment) {
-        alert('Debes escribir un motivo para rechazar la resolucion');
+        alert('Debes escribir un motivo para rechazar la resolución');
         return;
       }
 
@@ -743,7 +743,7 @@ function attachDetailEvents() {
 
         if (!response.ok) {
           const message = await response.text();
-          alert(message || 'No se pudo rechazar la resolucion');
+          alert(message || 'No se pudo rechazar la resolución');
           return;
         }
 
