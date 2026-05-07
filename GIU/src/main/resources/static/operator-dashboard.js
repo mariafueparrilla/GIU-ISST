@@ -106,7 +106,7 @@ function getOperatorViewConfig(view) {
 async function loadSessionUser() {
   const response = await fetch('/api/auth/me', { credentials: 'same-origin' });
   if (!response.ok) {
-    throw new Error('Sesion no valida');
+    throw new Error('Sesión no valida');
   }
 
   currentUser = await response.json();
@@ -227,7 +227,7 @@ function renderOperatorDashboard() {
 
       <main class="px-5 py-6">
         <div class="flex items-center justify-between mb-6">
-          <h1 class="text-3xl font-bold text-slate-900">Revision y asignacion</h1>
+          <h1 class="text-3xl font-bold text-slate-900">Revisión y asignación</h1>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
