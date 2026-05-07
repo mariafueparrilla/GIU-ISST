@@ -81,6 +81,11 @@ function isValidSpanishDni(dni) {
   return dni[8] === dniControlLetters[number % 23];
 }
 
+function isValidEmail(email) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/;
+  return emailRegex.test(email);
+}
+
 /**
  * Renderiza la pantalla de registro.
  */
@@ -258,6 +263,11 @@ function attachRegisterEvents() {
     // Validación del DNI español con letra de control
     if (!isValidSpanishDni(dni)) {
       showToast('El DNI no es válido', 'error');
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      showToast('El correo electrónico no es válido', 'error');
       return;
     }
 

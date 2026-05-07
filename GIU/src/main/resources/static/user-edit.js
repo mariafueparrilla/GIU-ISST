@@ -11,6 +11,11 @@ const roleMap = {
   technician: 'Tecnico'
 };
 
+function isValidEmail(email) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/;
+  return emailRegex.test(email);
+}
+
 async function loadSessionUser() {
   const response = await fetch('/api/auth/me', { credentials: 'same-origin' });
   if (!response.ok) {
@@ -206,6 +211,11 @@ function attachEvents() {
 
     if (!name || !email) {
       alert('Nombre y email son obligatorios');
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      alert('El correo electrónico no es válido');
       return;
     }
 

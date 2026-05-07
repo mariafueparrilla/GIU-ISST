@@ -19,6 +19,22 @@ const teamMap = {
   limpieza: 'Limpieza'
 };
 
+const dniControlLetters = 'TRWAGMYFPDXBNJZSQVHLCKE';
+
+function isValidSpanishDni(dni) {
+  if (!/^\d{8}[A-Z]$/.test(dni)) {
+    return false;
+  }
+
+  const number = Number(dni.slice(0, 8));
+  return dni[8] === dniControlLetters[number % 23];
+}
+
+function isValidEmail(email) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/;
+  return emailRegex.test(email);
+}
+
 async function loadSessionUser() {
   const response = await fetch('/api/auth/me', { credentials: 'same-origin' });
   if (!response.ok) {
@@ -225,6 +241,16 @@ function attachEvents() {
 
     if (!name || !email || !newDni || !role) {
       alert('Nombre, email, DNI y rol son obligatorios');
+      return;
+    }
+
+    if (!isValidSpanishDni(newDni)) {
+      alert('El DNI no es válido');
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      alert('El correo electrónico no es válido');
       return;
     }
 
