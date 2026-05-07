@@ -2,6 +2,8 @@ let currentUser = null;
 let selectedImages = [];
 let mapPicker = null;
 let selectedLocation = null;
+let locationValidated = false;
+let mapMarker = null;
 
 const roleMap = {
   admin: 'Admin',
@@ -129,16 +131,20 @@ function initMapPicker() {
   }).addTo(mapPicker);
 
   // Crear marcador inicial
-  const marker = L.marker([defaultCenter.lat, defaultCenter.lng], {
-    draggable: true,
-    title: 'Ubicacion de la incidencia'
+  mapMarker = L.marker([defaultCenter.lat, defaultCenter.lng], {
+  draggable: true,
+  title: 'Ubicacion de la incidencia'
   }).addTo(mapPicker);
 
+// La ubicación inicial es solo visual. No cuenta como ubicación válida.
+selectedLocation = null;
+locationValidated = false;
   selectedLocation = defaultCenter;
 
   function updateLocationFromMarker() {
-    const position = marker.getLatLng();
+    const position = mapMarker.getLatLng();
     selectedLocation = { lat: position.lat, lng: position.lng };
+    locationValidated = true;
     
     // Actualizar campos de lat/lon
     const latInput = document.getElementById('ubicacion-lat');
@@ -202,11 +208,11 @@ function initMapPicker() {
   }
 
   // Actualizar cuando el marcador se arrastra
-  marker.on('dragend', updateLocationFromMarker);
+  mapMarker.on('dragend', updateLocationFromMarker);
 
   // Permitir hacer click en el mapa para establecer la ubicacion
   mapPicker.on('click', (event) => {
-    marker.setLatLng(event.latlng);
+    mapMarker.setLatLng(event.latlng);
     updateLocationFromMarker();
   });
 
@@ -219,7 +225,7 @@ function initMapPicker() {
         
         // Centrar mapa en la ubicacion del usuario
         mapPicker.setView([userLat, userLng], 16);
-        marker.setLatLng([userLat, userLng]);
+        mapMarker.setLatLng([userLat, userLng]);
         
         selectedLocation = { lat: userLat, lng: userLng };
         updateLocationFromMarker();
@@ -239,6 +245,68 @@ function initMapPicker() {
     // Navegador no soporta geolocation
     console.warn('Geolocation no soportada en este navegador');
     updateLocationFromMarker();
+  }
+}
+
+async function validateTypedAddress() {
+  const municipio = document.getElementById('ubicacion-municipio').value.trim();
+  const calle = document.getElementById('ubicacion-calle').value.trim();
+  const numero = document.getElementById('ubicacion-numero').value.trim();
+  const cp = document.getElementById('ubicacion-cp').value.trim();
+
+  if (!municipio || !calle || !numero || !cp) {
+    alert('Debes completar municipio, calle, número y código postal');
+    return false;
+  }
+
+  const query = `${calle} ${numero}, ${cp}, ${municipio}, España`;
+
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=es&q=${encodeURIComponent(query)}`,
+      { headers: { 'Accept': 'application/json' } }
+    );
+
+    const results = await response.json();
+
+    if (!results || results.length === 0) {
+      alert('No se ha podido localizar la dirección indicada en el mapa');
+      return false;
+    }
+
+    const result = results[0];
+    const lat = Number(result.lat);
+    const lon = Number(result.lon);
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+      alert('La dirección no devuelve coordenadas válidas');
+      return false;
+    }
+
+    // Comunidad de Madrid aproximada
+    if (lat < 39.8 || lat > 41.2 || lon < -4.6 || lon > -3.0) {
+      alert('La ubicación indicada está fuera del área de trabajo permitida');
+      return false;
+    }
+
+    selectedLocation = { lat, lng: lon };
+    locationValidated = true;
+
+    document.getElementById('ubicacion-lat').value = lat.toFixed(6);
+    document.getElementById('ubicacion-lon').value = lon.toFixed(6);
+    document.getElementById('ubicacion-formatted-address').value = result.display_name || query;
+    document.getElementById('ubicacion-place-id').value = result.osm_id || '';
+
+    if (mapPicker && mapMarker) {
+      mapPicker.setView([lat, lon], 17);
+      mapMarker.setLatLng([lat, lon]);
+    }
+
+    return true;
+  } catch (error) {
+    console.error(error);
+    alert('Error al validar la dirección en el mapa');
+    return false;
   }
 }
 
@@ -381,6 +449,22 @@ function attachNewIncidentEvents() {
   const dragDropZone = document.getElementById('drag-drop-zone');
   const imageInput = document.getElementById('image-input');
 
+  ['ubicacion-municipio', 'ubicacion-calle', 'ubicacion-numero', 'ubicacion-cp'].forEach(id => {
+  const input = document.getElementById(id);
+  if (!input) return;
+
+  input.addEventListener('input', () => {
+    locationValidated = false;
+    selectedLocation = null;
+
+    document.getElementById('ubicacion-lat').value = '';
+    document.getElementById('ubicacion-lon').value = '';
+    document.getElementById('ubicacion-formatted-address').value = '';
+    document.getElementById('ubicacion-place-id').value = '';
+  });
+});
+
+
   logoutBtn.addEventListener('click', async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
     localStorage.removeItem('currentUser');
@@ -415,6 +499,13 @@ function attachNewIncidentEvents() {
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
+
+    if (!locationValidated) {
+    const addressOk = await validateTypedAddress();
+    if (!addressOk) {
+      return;
+    }
+  }
 
     const payload = {
       title: document.getElementById('incident-title').value.trim(),
