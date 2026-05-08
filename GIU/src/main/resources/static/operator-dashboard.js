@@ -1,6 +1,8 @@
 let currentUser = null;
 let incidents = [];
 let currentOperatorView = 'pending';
+let operatorSearchQuery = '';
+let reportCategoryFilter = '';
 
 const TEAM_OPTIONS = [
   { value: 'ALUMBRADO', label: 'Alumbrado' },
@@ -68,7 +70,7 @@ function getOperatorViewConfig(view) {
     return {
       title: 'Asignadas',
       state: 'asignada',
-      empty: 'No hay incidencias asignadas'
+      empty: 'No hay incidencias que coincidan con los filtros'
     };
   }
 
@@ -76,7 +78,7 @@ function getOperatorViewConfig(view) {
     return {
       title: 'En curso',
       state: 'en_curso',
-      empty: 'No hay incidencias en curso'
+      empty: 'No hay incidencias que coincidan con los filtros'
     };
   }
 
@@ -84,7 +86,7 @@ function getOperatorViewConfig(view) {
     return {
       title: 'Resueltas',
       state: 'resuelta',
-      empty: 'No hay incidencias resueltas'
+      empty: 'No hay incidencias que coincidan con los filtros'
     };
   }
 
@@ -92,14 +94,14 @@ function getOperatorViewConfig(view) {
     return {
       title: 'Cerradas',
       state: 'cerrada',
-      empty: 'No hay incidencias cerradas'
+      empty: 'No hay incidencias que coincidan con los filtros'
     };
   }
 
   return {
     title: 'Pendientes',
     state: 'creada',
-    empty: 'No hay incidencias pendientes'
+    empty: 'No hay incidencias que coincidan con los filtros'
   };
 }
 
@@ -131,12 +133,39 @@ function getIncidentsByState(state) {
   return incidents.filter((incident) => incident.state === state);
 }
 
-function getVisibleIncidents(viewConfig) {
-  if (viewConfig.state === null) {
-    return incidents;
+function getUniqueReportCategories() {
+  return [...new Set(incidents
+    .map((incident) => incident.category?.toLowerCase())
+    .filter(Boolean)
+  )].sort();
+}
+
+function incidentMatchesSearch(incident) {
+  const query = (operatorSearchQuery || '').trim();
+  if (!query) {
+    return true;
   }
 
-  return getIncidentsByState(viewConfig.state);
+  const lowerQuery = query.toLowerCase();
+  return [
+    incident.title,
+    incident.description,
+    incident.category,
+    incident.creatorDni,
+    incident.assignedTeam
+  ].some((value) => value && value.toLowerCase().includes(lowerQuery));
+}
+
+function incidentMatchesCategoryFilter(incident) {
+  if (!reportCategoryFilter) {
+    return true;
+  }
+  return incident.category?.toLowerCase() === reportCategoryFilter.toLowerCase();
+}
+
+function getVisibleIncidents(viewConfig) {
+  const baseIncidents = viewConfig.state === null ? incidents : getIncidentsByState(viewConfig.state);
+  return baseIncidents.filter((incident) => incidentMatchesSearch(incident) && incidentMatchesCategoryFilter(incident));
 }
 
 function renderIncidentCard(incident) {
@@ -187,6 +216,15 @@ function renderIncidentCard(incident) {
       </div>
     </div>
   `;
+}
+
+function preserveSearchFocus() {
+  const searchInput = document.getElementById('incident-search-input');
+  if (!searchInput) return;
+
+  searchInput.focus();
+  const caretPos = searchInput.value.length;
+  searchInput.setSelectionRange(caretPos, caretPos);
 }
 
 function renderOperatorDashboard() {
@@ -255,6 +293,26 @@ function renderOperatorDashboard() {
           `).join('')}
         </div>
 
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm mb-6">
+          <div class="grid gap-4 md:grid-cols-2 items-start">
+            <label class="grid gap-2">
+              <span class="text-slate-600 text-sm font-semibold">Buscar incidencias</span>
+              <input id="incident-search-input" type="text" value="${operatorSearchQuery}" placeholder="Añade filtros a la búsqueda" class="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-800" />
+              <p class="text-xs text-slate-400 mt-1">Filtra por título, descripción, categoría, creador o equipo.</p>
+            </label>
+
+            <label class="grid gap-2">
+              <span class="text-slate-600 text-sm font-semibold">Categoría reportada</span>
+              <select id="incident-category-filter" class="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-800">
+                <option value="">Todas</option>
+                ${getUniqueReportCategories().map((category) => `
+                  <option value="${category}" ${reportCategoryFilter === category ? 'selected' : ''}>${category.toUpperCase()}</option>
+                `).join('')}
+              </select>
+            </label>
+          </div>
+        </div>
+
         <div class="space-y-4">
           <h2 class="text-xl font-bold text-slate-900 mb-3">${viewConfig.title}</h2>
           ${visibleIncidents.length === 0 ? `
@@ -269,6 +327,7 @@ function renderOperatorDashboard() {
 
   lucide.createIcons();
   attachEvents();
+  preserveSearchFocus();
 }
 
 async function assignIncidentToTeam(incidentId, team) {
@@ -346,7 +405,23 @@ async function confirmResolutionIncident(incidentId) {
 function attachEvents() {
   const logoutBtn = document.getElementById('logout-btn');
   const switchUserModeBtn = document.getElementById('switch-user-mode-btn');
+  const searchInput = document.getElementById('incident-search-input');
+  const categoryFilter = document.getElementById('incident-category-filter');
   const viewButtons = document.querySelectorAll('.operator-view-btn');
+
+  if (searchInput) {
+    searchInput.addEventListener('input', (event) => {
+      operatorSearchQuery = event.target.value || '';
+      renderOperatorDashboard();
+    });
+  }
+
+  if (categoryFilter) {
+    categoryFilter.addEventListener('change', (event) => {
+      reportCategoryFilter = event.target.value || '';
+      renderOperatorDashboard();
+    });
+  }
 
   logoutBtn.addEventListener('click', async () => {
     await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });

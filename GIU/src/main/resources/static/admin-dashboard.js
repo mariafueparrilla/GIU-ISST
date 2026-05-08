@@ -4,6 +4,10 @@ let incidents = [];
 let activeTab = 'incidencias';
 let activeIncidentFilters = { priority: [], state: [], team: [] };
 let activeUserRoleFilters = [];
+let adminIncidentSearchQuery = '';
+let adminUserSearchQuery = '';
+let isInitialLoad = true;
+let adminIncidentMapNeedsRefresh = true;
 
 const roleMap = {
   admin: 'Administrador',
@@ -243,17 +247,178 @@ function getTechnicalTeamStats(userList, incidentList) {
   });
 }
 
+function adminIncidentMatchesSearch(incident) {
+  const query = (adminIncidentSearchQuery || '').trim().toLowerCase();
+  if (!query) {
+    return true;
+  }
+
+  const values = [
+    incident.id,
+    incident.title,
+    incident.description,
+    incident.category,
+    incident.state,
+    incident.priority,
+    incident.creatorDni,
+    incident.creatorName,
+    incident.creatorSurname,
+    incident.assignedTeam,
+    incident.ubicacionMunicipio,
+    incident.ubicacionCalle,
+    incident.ubicacionNumero,
+    incident.resolutionDescription,
+    incident.ubicacionCodigoPostal,
+    incident.ubicacionBarrio
+  ];
+
+  return values
+    .filter((value) => value !== undefined && value !== null)
+    .map((value) => String(value).toLowerCase())
+    .some((text) => text.includes(query));
+}
+
+function adminUserMatchesSearch(user) {
+  const query = (adminUserSearchQuery || '').trim().toLowerCase();
+  if (!query) {
+    return true;
+  }
+
+  return [
+    user.name,
+    user.surname,
+    user.dni,
+    user.email,
+    user.role
+  ].some((value) => value && value.toLowerCase().includes(query));
+}
+
 function getFilteredIncidents() {
   return incidents.filter((incident) => {
     if (activeIncidentFilters.priority.length > 0 && !activeIncidentFilters.priority.includes(incident.priority)) return false;
     if (activeIncidentFilters.state.length > 0 && !activeIncidentFilters.state.includes(incident.state)) return false;
     if (activeIncidentFilters.team.length > 0 && !activeIncidentFilters.team.includes(incident.assignedTeam)) return false;
-    return true;
+    return adminIncidentMatchesSearch(incident);
+  });
+}
+
+function updateAdminIncidentList() {
+  const filteredIncidents = getFilteredIncidents();
+  const totalIncidents = incidents.length;
+  const titleCount = document.getElementById('admin-incident-title-count');
+  const listContainer = document.getElementById('admin-incident-list-container');
+
+  if (titleCount) {
+    titleCount.textContent = `(${filteredIncidents.length} de ${totalIncidents})`;
+  }
+
+  if (!listContainer) {
+    return;
+  }
+
+  if (filteredIncidents.length === 0) {
+    listContainer.innerHTML = `
+      <div class="flex flex-col items-center justify-center text-center py-20 text-slate-400">
+        <i data-lucide="inbox" style="width:46px;height:46px;" class="mb-4"></i>
+        <p class="text-lg font-semibold text-slate-400">No hay incidencias que coincidan con los filtros</p>
+      </div>
+    `;
+    return;
+  }
+
+  const order = { creada: 0, asignada: 1, resuelta: 2, cerrada: 3, rechazada: 4 };
+  const sorted = filteredIncidents.slice().sort((a, b) => {
+    const ka = order[normalizeStateKey(a.state)] ?? 99;
+    const kb = order[normalizeStateKey(b.state)] ?? 99;
+    if (ka !== kb) return ka - kb;
+    return (a.id || 0) - (b.id || 0);
+  });
+
+  listContainer.innerHTML = sorted.map((incident) => renderAdminIncidentRow(incident)).join('');
+  lucide.createIcons();
+  attachAdminIncidentListEvents();
+}
+
+function attachAdminIncidentListEvents() {
+  document.querySelectorAll('.incident-detail-link').forEach(card => {
+    card.addEventListener('click', () => {
+      const incidentId = card.dataset.incidentId;
+      window.location.href = `/incident-detail?id=${incidentId}`;
+    });
   });
 }
 
 function getFilteredUsers() {
-  return activeUserRoleFilters.length > 0 ? users.filter((user) => activeUserRoleFilters.includes(user.role)) : users;
+  const filteredByRole = activeUserRoleFilters.length > 0 ? users.filter((user) => activeUserRoleFilters.includes(user.role)) : users;
+  return filteredByRole.filter(adminUserMatchesSearch);
+}
+
+function updateAdminUserList() {
+  const filteredUsersList = getFilteredUsers();
+  const titleCount = document.getElementById('admin-user-title-count');
+  const listContainer = document.getElementById('admin-user-list-container');
+
+  if (titleCount) {
+    titleCount.textContent = `(${filteredUsersList.length} de ${users.length})`;
+  }
+
+  if (!listContainer) {
+    return;
+  }
+
+  if (filteredUsersList.length === 0) {
+    listContainer.innerHTML = `
+      <div class="flex flex-col items-center justify-center text-center py-20 text-slate-400">
+        <i data-lucide="users" style="width:46px;height:46px;" class="mb-4"></i>
+        <p class="text-lg font-semibold text-slate-400">No hay usuarios que coincidan con los filtros</p>
+      </div>
+    `;
+    return;
+  }
+
+  listContainer.innerHTML = filteredUsersList.map((user) => `
+    <div class="bg-white border border-slate-200 rounded-2xl px-5 py-4 flex items-center justify-between shadow-sm">
+      <div class="flex items-center gap-4">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center ${user.role === 'admin' ? 'bg-violet-100 text-violet-600' : 'bg-blue-100 text-blue-600'}">
+          <i data-lucide="${getRoleIcon(user.role)}" style="width:18px;height:18px;"></i>
+        </div>
+
+        <div>
+          <p class="font-semibold text-slate-900">${user.name}</p>
+          <p class="text-sm text-slate-400">${user.dni} · ${user.email || ''}</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <span class="px-3 py-1 rounded-full text-xs font-semibold ${getRoleBadgeClass(user.role)}">${getRoleLabel(user.role)}</span>
+        <button class="edit-user-btn text-slate-400 hover:text-slate-600" data-dni="${user.dni}" title="Editar">
+          <i data-lucide="pencil" style="width:16px;height:16px;"></i>
+        </button>
+        ${currentUser?.dni !== user.dni ? `
+        <button class="delete-user-btn text-rose-400 hover:text-rose-600" data-dni="${user.dni}" title="Eliminar">
+          <i data-lucide="trash-2" style="width:16px;height:16px;"></i>
+        </button>
+        ` : ''}
+      </div>
+    </div>
+  `).join('');
+
+  lucide.createIcons();
+  attachAdminUserListEvents();
+}
+
+function attachAdminUserListEvents() {
+  document.querySelectorAll('.edit-user-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      window.location.href = `/admin-user-edit?dni=${encodeURIComponent(btn.dataset.dni)}`;
+    });
+  });
+
+  document.querySelectorAll('.delete-user-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await deleteUser(btn.dataset.dni);
+    });
+  });
 }
 
 function toggleIncidentFilter(type, value) {
@@ -383,16 +548,38 @@ function renderIncidenciasSection() {
   return `
     <div class="mb-8">
       <h1 class="text-3xl font-bold text-slate-900">
-        Incidencias <span class="text-slate-400 text-xl">(${filteredIncidents.length} de ${totalIncidents})</span>
+        Incidencias <span id="admin-incident-title-count" class="text-slate-400 text-xl">(${filteredIncidents.length} de ${totalIncidents})</span>
       </h1>
+    </div>
+
+    <div class="mb-6 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm max-w-4xl mx-auto">
+      <div class="flex items-center justify-between gap-3 mb-4 flex-wrap">
+        <div>
+          <h2 class="text-lg font-bold text-slate-900">Mapa de incidencias activas</h2>
+          <p class="text-sm text-slate-500">Se muestran las incidencias visibles tras aplicar los filtros.</p>
+        </div>
+        <div class="text-sm text-slate-500">
+          <span class="font-semibold text-slate-900">${filteredIncidents.filter((incident) => normalizeStateKey(incident.state) !== 'rechazada' && normalizeStateKey(incident.state) !== 'cerrada' && getIncidentCoordinates(incident)).length}</span> incidencias visibles
+        </div>
+      </div>
+      <div id="admin-incidents-map" class="rounded-2xl border border-slate-200"></div>
     </div>
 
     <div class="mb-6 bg-white border border-slate-200 rounded-2xl p-3 shadow-sm w-full max-w-none">
       <div class="mb-3">
         <h3 class="text-sm font-medium text-slate-600">Filtrar</h3>
       </div>
+      <div class="grid gap-4 lg:grid-cols-[1.5fr_1fr] items-end mb-4">
+        <label class="grid gap-2">
+          <span class="text-slate-600 text-sm font-semibold">Buscar incidencia</span>
+          <input id="admin-incident-search-input" type="text" value="${adminIncidentSearchQuery}" placeholder="Añade filtros a la búsqueda" class="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-800" />
+        </label>
+        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <p class="text-slate-500 text-sm">Busca por título, descripción, categoría, DNI, ubicación o equipo asignado.</p>
+        </div>
+      </div>
       <div class="flex gap-3 flex-wrap">
-        <details class="group relative rounded-2xl border border-slate-200 bg-slate-50 p-3 overflow-visible flex-1 min-w-[16rem]">
+        <details class="incident-filter-dropdown group relative rounded-2xl border border-slate-200 bg-slate-50 p-3 overflow-visible flex-1 min-w-[16rem]">
           <summary class="flex cursor-pointer items-center justify-between rounded-2xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100">
             <span>Prioridad</span>
             <span class="text-slate-400">${selectedPriorityLabel}</span>
@@ -413,7 +600,7 @@ function renderIncidenciasSection() {
           </div>
         </details>
 
-        <details class="group relative rounded-2xl border border-slate-200 bg-slate-50 p-3 overflow-visible flex-1 min-w-[16rem]">
+        <details class="incident-filter-dropdown group relative rounded-2xl border border-slate-200 bg-slate-50 p-3 overflow-visible flex-1 min-w-[16rem]">
           <summary class="flex cursor-pointer items-center justify-between rounded-2xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100">
             <span>Estado</span>
             <span class="text-slate-400">${selectedStateLabel}</span>
@@ -434,7 +621,7 @@ function renderIncidenciasSection() {
           </div>
         </details>
 
-        <details class="group relative rounded-2xl border border-slate-200 bg-slate-50 p-3 overflow-visible flex-1 min-w-[16rem]">
+        <details class="incident-filter-dropdown group relative rounded-2xl border border-slate-200 bg-slate-50 p-3 overflow-visible flex-1 min-w-[16rem]">
           <summary class="flex cursor-pointer items-center justify-between rounded-2xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100">
             <span>Equipo</span>
             <span class="text-slate-400">${selectedTeamLabel}</span>
@@ -466,21 +653,17 @@ function renderIncidenciasSection() {
       </div>
     </div>
 
-    <div class="mb-6 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm max-w-4xl mx-auto">
-      <div class="flex items-center justify-between gap-3 mb-4 flex-wrap">
-        <div>
-          <h2 class="text-lg font-bold text-slate-900">Mapa de incidencias activas</h2>
-          <p class="text-sm text-slate-500">Se muestran las incidencias visibles tras aplicar los filtros.</p>
-        </div>
-        <div class="text-sm text-slate-500">
-          <span class="font-semibold text-slate-900">${filteredIncidents.filter((incident) => normalizeStateKey(incident.state) !== 'rechazada' && normalizeStateKey(incident.state) !== 'cerrada' && getIncidentCoordinates(incident)).length}</span> incidencias visibles
-        </div>
-      </div>
-      <div id="admin-incidents-map" class="rounded-2xl border border-slate-200"></div>
-    </div>
-
-    <div class="space-y-4">
+    <div id="admin-incident-list-container" class="space-y-4">
       ${(() => {
+        if (filteredIncidents.length === 0) {
+          return `
+            <div class="flex flex-col items-center justify-center text-center py-20 text-slate-400">
+              <i data-lucide="inbox" style="width:46px;height:46px;" class="mb-4"></i>
+              <p class="text-lg font-semibold text-slate-400">No hay incidencias que coincidan con los filtros</p>
+            </div>
+          `;
+        }
+
         const order = { creada: 0, asignada: 1, resuelta: 2, cerrada: 3, rechazada: 4 };
         const sorted = filteredIncidents.slice().sort((a, b) => {
           const ka = order[normalizeStateKey(a.state)] ?? 99;
@@ -522,6 +705,16 @@ function renderAdminIncidentRow(incident) {
       </div>
     </div>
   `;
+}
+
+function preserveAdminSearchFocus() {
+  const inputId = activeTab === 'usuarios' ? 'admin-user-search-input' : 'admin-incident-search-input';
+  const input = document.getElementById(inputId);
+  if (!input) return;
+
+  input.focus({ preventScroll: true });
+  const caretPos = input.value.length;
+  input.setSelectionRange(caretPos, caretPos);
 }
 
 function renderAdminDashboard() {
@@ -599,15 +792,24 @@ function renderAdminDashboard() {
         <section id="usuarios" class="tab-content hidden">
           <div class="mb-8">
             <h1 class="text-3xl font-bold text-slate-900">
-              Usuarios <span class="text-slate-400 text-xl">(${getFilteredUsers().length} de ${users.length})</span>
-            </h1>
-          </div>
+      Usuarios <span id="admin-user-title-count" class="text-slate-400 text-xl">(${getFilteredUsers().length} de ${users.length})</span>
 
           <div class="mb-6 bg-white border border-slate-200 rounded-2xl p-3 shadow-sm max-w-2xl">
-            <div class="mb-3">
-              <h3 class="text-sm font-medium text-slate-600">Filtrar</h3>
+            <div class="grid gap-4">
+              <div>
+                <h3 class="text-sm font-medium text-slate-600">Filtrar</h3>
+              </div>
+              <div class="grid gap-4 sm:grid-cols-[1.5fr_1fr] items-end">
+                <label class="grid gap-2">
+                  <span class="text-slate-600 text-sm font-semibold">Buscar usuarios</span>
+                  <input id="admin-user-search-input" type="text" value="${adminUserSearchQuery}" placeholder="Añade filtros a la búsqueda" class="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-800" />
+                </label>
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p class="text-slate-500 text-sm">Busca por nombre, apellidos, DNI, email o rol.</p>
+                </div>
+              </div>
             </div>
-            <div class="flex gap-3 flex-wrap">
+            <div class="flex gap-3 flex-wrap mt-4">
               <details class="group relative rounded-2xl border border-slate-200 bg-slate-50 p-3 overflow-visible flex-1 min-w-0">
                 <summary class="flex cursor-pointer items-center justify-between rounded-2xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100">
                   <span>Filtrar por rol</span>
@@ -640,33 +842,44 @@ function renderAdminDashboard() {
             </div>
           </div>
 
-          <div class="space-y-4">
-            ${getFilteredUsers().map(user => `
-              <div class="bg-white border border-slate-200 rounded-2xl px-5 py-4 flex items-center justify-between shadow-sm">
-                <div class="flex items-center gap-4">
-                  <div class="w-10 h-10 rounded-xl flex items-center justify-center ${user.role === 'admin' ? 'bg-violet-100 text-violet-600' : 'bg-blue-100 text-blue-600'}">
-                    <i data-lucide="${getRoleIcon(user.role)}" style="width:18px;height:18px;"></i>
+          <div id="admin-user-list-container" class="space-y-4">
+            ${(() => {
+              const filteredUsersList = getFilteredUsers();
+              if (filteredUsersList.length === 0) {
+                return `
+                  <div class="flex flex-col items-center justify-center text-center py-20 text-slate-400">
+                    <i data-lucide="users" style="width:46px;height:46px;" class="mb-4"></i>
+                    <p class="text-lg font-semibold text-slate-400">No hay usuarios que coincidan con los filtros</p>
+                  </div>
+                `;
+              }
+              return filteredUsersList.map(user => `
+                <div class="bg-white border border-slate-200 rounded-2xl px-5 py-4 flex items-center justify-between shadow-sm">
+                  <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center ${user.role === 'admin' ? 'bg-violet-100 text-violet-600' : 'bg-blue-100 text-blue-600'}">
+                      <i data-lucide="${getRoleIcon(user.role)}" style="width:18px;height:18px;"></i>
+                    </div>
+
+                    <div>
+                      <p class="font-semibold text-slate-900">${user.name}</p>
+                      <p class="text-sm text-slate-400">${user.dni} · ${user.email || ''}</p>
+                    </div>
                   </div>
 
-                  <div>
-                    <p class="font-semibold text-slate-900">${user.name}</p>
-                    <p class="text-sm text-slate-400">${user.dni} · ${user.email || ''}</p>
+                  <div class="flex items-center gap-3">
+                    <span class="px-3 py-1 rounded-full text-xs font-semibold ${getRoleBadgeClass(user.role)}">${getRoleLabel(user.role)}</span>
+                    <button class="edit-user-btn text-slate-400 hover:text-slate-600" data-dni="${user.dni}" title="Editar">
+                      <i data-lucide="pencil" style="width:16px;height:16px;"></i>
+                    </button>
+                    ${currentUser?.dni !== user.dni ? `
+                    <button class="delete-user-btn text-rose-400 hover:text-rose-600" data-dni="${user.dni}" title="Eliminar">
+                      <i data-lucide="trash-2" style="width:16px;height:16px;"></i>
+                    </button>
+                    ` : ''}
                   </div>
                 </div>
-
-                <div class="flex items-center gap-3">
-                  <span class="px-3 py-1 rounded-full text-xs font-semibold ${getRoleBadgeClass(user.role)}">${getRoleLabel(user.role)}</span>
-                  <button class="edit-user-btn text-slate-400 hover:text-slate-600" data-dni="${user.dni}" title="Editar">
-                    <i data-lucide="pencil" style="width:16px;height:16px;"></i>
-                  </button>
-                  ${currentUser?.dni !== user.dni ? `
-                  <button class="delete-user-btn text-rose-400 hover:text-rose-600" data-dni="${user.dni}" title="Eliminar">
-                    <i data-lucide="trash-2" style="width:16px;height:16px;"></i>
-                  </button>
-                  ` : ''}
-                </div>
-              </div>
-            `).join('')}
+              `).join('');
+            })()}
           </div>
         </section>
 
@@ -751,8 +964,19 @@ function renderAdminDashboard() {
   lucide.createIcons();
   attachAdminEvents();
 
+  setTimeout(() => {
+    if (isInitialLoad) {
+      window.scrollTo(0, 0);
+      isInitialLoad = false;
+    }
+    preserveAdminSearchFocus();
+  }, 0);
+
   if (activeTab === 'incidencias') {
-    setTimeout(() => renderAdminIncidentsMap(getFilteredIncidents()), 0);
+    if (adminIncidentMapNeedsRefresh) {
+      setTimeout(() => renderAdminIncidentsMap(getFilteredIncidents()), 0);
+      adminIncidentMapNeedsRefresh = false;
+    }
   }
 
   if (activeTab !== 'incidencias') {
@@ -926,6 +1150,7 @@ function attachAdminEvents() {
   document.querySelectorAll('.incident-filter-menu-item').forEach(btn => {
     btn.addEventListener('click', () => {
       toggleIncidentFilter(btn.dataset.filterType, btn.dataset.filterValue);
+      adminIncidentMapNeedsRefresh = true;
       renderAdminDashboard();
     });
   });
@@ -933,7 +1158,20 @@ function attachAdminEvents() {
   document.querySelectorAll('.incident-filter-clear-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       activeIncidentFilters[btn.dataset.filterType] = [];
+      adminIncidentMapNeedsRefresh = true;
       renderAdminDashboard();
+    });
+  });
+
+  document.querySelectorAll('.incident-filter-dropdown').forEach((details) => {
+    details.addEventListener('toggle', () => {
+      if (details.open) {
+        document.querySelectorAll('.incident-filter-dropdown').forEach((other) => {
+          if (other !== details) {
+            other.open = false;
+          }
+        });
+      }
     });
   });
 
@@ -955,9 +1193,31 @@ function attachAdminEvents() {
     btn.addEventListener('click', () => {
       activeIncidentFilters = { priority: [], state: [], team: [] };
       activeUserRoleFilters = [];
+      adminIncidentSearchQuery = '';
+      adminUserSearchQuery = '';
+      adminIncidentMapNeedsRefresh = true;
       renderAdminDashboard();
     });
   });
+
+  const incidentSearchInput = document.getElementById('admin-incident-search-input');
+  if (incidentSearchInput) {
+    incidentSearchInput.addEventListener('input', (event) => {
+      adminIncidentSearchQuery = event.target.value;
+      adminIncidentMapNeedsRefresh = false;
+      updateAdminIncidentList();
+      preserveAdminSearchFocus();
+    });
+  }
+
+  const userSearchInput = document.getElementById('admin-user-search-input');
+  if (userSearchInput) {
+    userSearchInput.addEventListener('input', (event) => {
+      adminUserSearchQuery = event.target.value;
+      updateAdminUserList();
+      preserveAdminSearchFocus();
+    });
+  }
 
   document.querySelectorAll('.incident-detail-link').forEach(card => {
     card.addEventListener('click', () => {
