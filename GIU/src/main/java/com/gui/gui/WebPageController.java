@@ -89,4 +89,12 @@ public class WebPageController {
     public String incidentDetailPage() {
         return "incident-detail";
     }
+
+    /**
+     * Vista de creación de informe técnico para incidencias resueltas.
+     */
+    @GetMapping({"/create-report", "/create-report.html"})
+    public String createReportPage() {
+        return "create-report";
+    }
 }

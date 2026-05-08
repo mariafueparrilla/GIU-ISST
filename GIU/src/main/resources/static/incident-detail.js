@@ -357,6 +357,9 @@ function renderIncidentDetail() {
                 <span class="px-3 py-1 rounded-full text-xs font-semibold ${stateColorMap[incidentDetail.state] || 'bg-slate-100'}">
                   ${stateLabelMap[incidentDetail.state] || incidentDetail.state}
                 </span>
+                ${['operator', 'admin'].includes(currentUser?.role) && incidentDetail.state === 'resuelta' ? `
+                <button id="generate-report-btn" type="button" class="px-4 py-2 rounded-2xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition">Generar informe</button>
+                ` : ''}
               </div>
             </div>
 
@@ -627,6 +630,7 @@ async function updateIncidentState(incidentId, state, fallbackMessage) {
 function attachDetailEvents() {
   const backBtn = document.getElementById("back-btn");
   const logoutBtn = document.getElementById("logout-btn");
+  const generateReportBtn = document.getElementById("generate-report-btn");
   const validateBtn = document.getElementById("validate-incident-btn");
   const rejectBtn = document.getElementById("reject-incident-btn");
   const confirmResolutionBtn = document.getElementById("confirm-resolution-btn");
@@ -751,6 +755,12 @@ function attachDetailEvents() {
       } finally {
         rejectResolutionBtn.disabled = false;
       }
+    });
+  }
+
+  if (generateReportBtn) {
+    generateReportBtn.addEventListener("click", () => {
+      window.location.href = `/create-report?id=${encodeURIComponent(incidentDetail.id)}`;
     });
   }
 
