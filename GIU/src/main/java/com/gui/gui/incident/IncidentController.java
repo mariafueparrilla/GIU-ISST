@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,7 +62,22 @@ public class IncidentController {
      */
     @GetMapping("/my")
     public List<IncidentPreviewResponse> myIncidents(Authentication authentication) {
-        return incidentService.getMyIncidentsPreview(authentication.getName());
+        if (authentication == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no autenticado");
+        }
+        String dni = authentication.getName();
+        if (dni == null || dni.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "DNI de usuario no disponible");
+        }
+        return incidentService.getMyIncidentsPreview(dni);
+    }
+
+    /**
+     * Lista incidencias aprobadas para que los ciudadanos las vean en el mapa.
+     */
+    @GetMapping("/approved")
+    public List<IncidentPreviewResponse> approvedIncidents() {
+        return incidentService.getApprovedIncidentsPreview();
     }
 
     /**

@@ -67,6 +67,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT, "/api/users/*").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/users/admin-edit/*").hasRole("ADMIN")
                 // API de incidencias de administracion.
+                .requestMatchers(HttpMethod.GET, "/api/incidents/approved").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/incidents").hasAnyRole("ADMIN", "OPERATOR")
                 .requestMatchers(HttpMethod.PATCH, "/api/incidents/*/state").hasRole("OPERATOR")
                 // API de revision operativa.

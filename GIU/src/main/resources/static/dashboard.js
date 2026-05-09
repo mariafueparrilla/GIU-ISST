@@ -1,5 +1,17 @@
 let currentUser = null;
 let myIncidents = [];
+let approvedIncidents = [];
+let userIncidentsMap = null;
+let userIncidentsMarkersLayer = null;
+
+const madridCenter = [40.4168, -3.7038];
+
+const mapMarkerColorByPriority = {
+  baja: '#0ea5e9',
+  media: '#f59e0b',
+  alta: '#ff6b35',
+  critica: '#ef4444'
+};
 
 const roleMap = {
   admin: "Admin",
@@ -66,11 +78,124 @@ async function loadSessionUser() {
 }
 
 async function loadMyIncidents() {
-  const response = await fetch("/api/incidents/my");
+  const response = await fetch("/api/incidents/my", { credentials: "same-origin" });
   if (!response.ok) {
-    throw new Error("No se pudieron cargar incidencias");
+    const errorText = await response.text();
+    console.error(`Error loading incidents: ${response.status}`, errorText);
+    throw new Error(`No se pudieron cargar incidencias (${response.status})`);
   }
   myIncidents = await response.json();
+  console.log("Incidencias propias cargadas:", myIncidents);
+  console.log("Primera incidencia propia (si existe):", myIncidents[0]);
+}
+
+async function loadApprovedIncidents() {
+  const response = await fetch("/api/incidents/approved", { credentials: "same-origin" });
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`Error loading approved incidents: ${response.status}`, errorText);
+    throw new Error(`No se pudieron cargar incidencias aprobadas (${response.status})`);
+  }
+  approvedIncidents = await response.json();
+  console.log("Incidencias aprobadas cargadas:", approvedIncidents);
+  console.log("Primera incidencia aprobada (si existe):", approvedIncidents[0]);
+}
+
+function getIncidentCoordinates(incident) {
+  // Intentar diferentes nombres de campos para latitud/longitud
+  const latitude = incident.ubicacionLatitud || incident.latitud || incident.latitude;
+  const longitude = incident.ubicacionLongitud || incident.longitud || incident.longitude;
+
+  const latNum = Number(latitude);
+  const lngNum = Number(longitude);
+
+  if (!Number.isFinite(latNum) || !Number.isFinite(lngNum)) {
+    console.log(`Coordenadas inválidas para "${incident.title}": lat=${latitude}, lng=${longitude}`);
+    return null;
+  }
+
+  // Verificar rangos razonables para Madrid
+  if (latNum < 40 || latNum > 41 || lngNum < -4 || lngNum > -3) {
+    console.log(`Coordenadas fuera de Madrid para "${incident.title}": [${latNum}, ${lngNum}]`);
+    return null;
+  }
+
+  return [latNum, lngNum];
+}
+
+function renderUserIncidentsMap(incidentList = myIncidents) {
+  const mapElement = document.getElementById('user-incidents-map');
+  if (!mapElement) {
+    console.log("Map element not found");
+    return;
+  }
+
+  // Fijar altura mínima si el contenedor está vacío
+  if (mapElement.clientHeight === 0) {
+    mapElement.style.minHeight = '400px';
+  }
+
+  if (!userIncidentsMap) {
+    console.log("Inicializando mapa de Leaflet...");
+    try {
+      userIncidentsMap = L.map(mapElement, { scrollWheelZoom: false }).setView(madridCenter, 11);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(userIncidentsMap);
+      userIncidentsMarkersLayer = L.layerGroup().addTo(userIncidentsMap);
+      console.log("Mapa inicializado correctamente");
+      console.log("Centro del mapa:", userIncidentsMap.getCenter());
+      console.log("Zoom del mapa:", userIncidentsMap.getZoom());
+    } catch (e) {
+      console.error("Error al inicializar mapa:", e);
+      throw e;
+    }
+  }
+
+  if (userIncidentsMarkersLayer) {
+    userIncidentsMarkersLayer.clearLayers();
+  }
+
+  const bounds = L.latLngBounds([]);
+  const validIncidents = incidentList.filter((incident) => getIncidentCoordinates(incident));
+  console.log("Incidentes totales:", incidentList.length);
+  console.log("Incidentes con coordenadas válidas:", validIncidents.length);
+
+  validIncidents.forEach((incident, index) => {
+    const coordinates = getIncidentCoordinates(incident);
+    if (coordinates) {
+      bounds.extend(coordinates);
+      const color = mapMarkerColorByPriority[incident.priority] || '#6b7280';
+      const marker = L.circleMarker(coordinates, {
+        radius: 8,
+        fillColor: color,
+        color: color,
+        weight: 2,
+        opacity: 1,
+        fillOpacity: 0.8,
+        title: incident.title
+      });
+      marker.addTo(userIncidentsMarkersLayer);
+    }
+  });
+
+  console.log(`Se agregaron ${validIncidents.length} marcadores al mapa`);
+
+  if (bounds.isValid()) {
+    userIncidentsMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 13 });
+  } else {
+    // Si no hay incidencias, mostrar mapa centrado en Madrid
+    userIncidentsMap.setView(madridCenter, 11);
+  }
+
+  setTimeout(() => {
+    try {
+      userIncidentsMap?.invalidateSize();
+      console.log("Mapa renderizado correctamente");
+    } catch (e) {
+      console.error("Error al redimensionar mapa:", e);
+    }
+  }, 100);
 }
 
 // Nueva función separada para mantener el HTML limpio
@@ -136,6 +261,7 @@ function getWorkerLandingPath(workerRole) {
 
 function renderDashboard() {
   const app = document.getElementById("app");
+  const isActingAsUser = currentUser.activeRole === "user";
 
   app.innerHTML = `
     <div class="min-h-full bg-surface-50">
@@ -155,6 +281,36 @@ function renderDashboard() {
       </nav>
 
       <main class="px-8 py-8">
+        ${isActingAsUser ? `
+          <div class="mb-8 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+            <div class="flex items-center justify-between gap-3 mb-4">
+              <div>
+                <h2 class="text-lg font-bold text-slate-900">Mapa de incidencias aprobadas</h2>
+                <p class="text-sm text-slate-500">${approvedIncidents.length > 0 ? 'Visualización geográfica de las incidencias aprobadas' : 'Aquí aparecerán las incidencias aprobadas por el equipo'}</p>
+              </div>
+            </div>
+            <div id="user-incidents-map" class="rounded-2xl border border-slate-200 min-h-96" style="height: 400px;"></div>
+            <div class="flex items-center gap-4 mt-4 text-sm text-slate-600 flex-wrap">
+              <div class="flex items-center gap-2">
+                <div style="width:12px;height:12px;border-radius:50%;background:#0ea5e9;"></div>
+                <span>Baja</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <div style="width:12px;height:12px;border-radius:50%;background:#f59e0b;"></div>
+                <span>Media</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <div style="width:12px;height:12px;border-radius:50%;background:#ff6b35;"></div>
+                <span>Alta</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <div style="width:12px;height:12px;border-radius:50%;background:#ef4444;"></div>
+                <span>Crítica</span>
+              </div>
+            </div>
+          </div>
+        ` : ''}
+
         <div class="flex items-center justify-between mb-8">
           <h1 class="text-3xl font-bold text-slate-900">
             Mis incidencias <span class="text-slate-400 text-xl">(${myIncidents.length})</span>
@@ -221,6 +377,13 @@ function renderDashboard() {
   `;
 
   lucide.createIcons();
+  if (isActingAsUser) {
+    // Esperar a que el DOM esté completamente renderizado antes de inicializar el mapa
+    setTimeout(() => {
+      console.log("Inicializando mapa después del render...");
+      renderUserIncidentsMap(approvedIncidents);
+    }, 100); // Aumentar el timeout para asegurar que el DOM esté listo
+  }
   attachDashboardEvents();
 }
 
@@ -285,7 +448,9 @@ function attachDashboardEvents() {
 
 document.addEventListener("DOMContentLoaded", async () => {
   try {
+    console.log("1. Iniciando carga de dashboard...");
     await loadSessionUser();
+    console.log("2. Usuario cargado:", currentUser);
 
     const isActingAsUser = currentUser.activeRole === "user";
     const currentPath = window.location.pathname;
@@ -295,21 +460,35 @@ document.addEventListener("DOMContentLoaded", async () => {
       // Si está en modo trabajador, debe ir a su panel
       const workerRole =
         currentUser.availableRoles.find((r) => r !== "user") || "operator";
+      console.log("3. Redirigiendo a modo trabajador:", workerRole);
       window.location.href = getWorkerLandingPath(workerRole);
       return;
     }
 
     if (isActingAsUser && currentPath.includes("admin")) {
       // Si está en modo ciudadano, no puede estar en el admin
+      console.log("3. Redirigiendo a dashboard (está en admin)");
       window.location.href = "/dashboard";
       return;
     }
 
     // Si todo está bien, cargamos los datos y dibujamos la pantalla
+    console.log("3. Cargando incidencias...");
     await loadMyIncidents();
+    if (isActingAsUser) {
+      await loadApprovedIncidents();
+    }
+    console.log("4. Incidencias cargadas:", myIncidents.length);
+    if (isActingAsUser) {
+      console.log("4.a Incidencias aprobadas cargadas:", approvedIncidents.length);
+    }
+    
+    console.log("5. Renderizando dashboard...");
     renderDashboard();
+    console.log("6. Dashboard renderizado correctamente");
   } catch (error) {
-    console.error(error);
+    console.error("ERROR en dashboard:", error);
+    console.error("Stack:", error.stack);
     localStorage.removeItem("currentUser");
     window.location.href = "/login";
   }

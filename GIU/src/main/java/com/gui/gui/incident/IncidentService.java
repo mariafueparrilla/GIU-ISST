@@ -405,6 +405,19 @@ public class IncidentService {
     }
 
     /**
+     * Devuelve todas las incidencias aprobadas para visualizarlas en el mapa ciudadano.
+     */
+    @Transactional(readOnly = true)
+    public List<IncidentPreviewResponse> getApprovedIncidentsPreview() {
+        return incidentRepository.findAll()
+            .stream()
+            .filter(incident -> incident.getState() != IncidentState.CREADA && incident.getState() != IncidentState.RECHAZADA)
+            .sorted(Comparator.comparing(IncidentEntity::getId).reversed())
+            .map(this::toPreviewResponse)
+            .toList();
+    }
+
+    /**
      * Devuelve todas las incidencias como previews para vista administrativa.
      */
     @Transactional(readOnly = true)
