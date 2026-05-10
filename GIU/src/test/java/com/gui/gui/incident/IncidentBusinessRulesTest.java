@@ -11,8 +11,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
 /**
- * Clase de pruebas unitarias para comprobar reglas básicas de negocio
- * relacionadas con las incidencias.
+ * Clase de pruebas unitarias para comprobar el funcionamiento
+ * de la plataforma GIU (Gestor de Incidencias Urbanas).
  *
  * Estas pruebas no levantan el servidor ni llaman a la API REST.
  * Solo comprueban el comportamiento de objetos y funciones concretas.
